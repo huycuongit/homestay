@@ -1,0 +1,10 @@
+User-agent: *
+Disallow:
+
+User-agent: Googlebot
+Disallow:
+
+Allow: /assets/favicon/favicon.ico
+
+Sitemap: https://xaylapdienhoanggiang.com/sitemap.xml
+Sitemap: https://xaylapdienhoanggiang.com/sitemap_index.xml

@@ -1,0 +1,36 @@
+{
+    "name": "sunnydays.vn",
+    "short_name": "Sunny Days",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ff8b00",
+    "theme_color": "#ff8b00",
+    "description": "Website Sunny Days hệ thống piano hàng đầu việt nam, học piano bất cứ khi nào bạn muốn, không cần trang bị đàn tại nhà, bảo lưu chương trình học mọi thời điểm",
+    "icons": [
+      {
+        "src": "/images/icons/android-chrome-192x192.png",
+        "sizes": "192x192",
+        "type": "image/png"
+      },
+      {
+        "src": "/images/icons/android-chrome-512x512.png",
+        "sizes": "512x512",
+        "type": "image/png"
+      }
+    ],
+    "screenshots": [
+      {
+          "src": "/images/icons/screenshot-desktop.png",
+          "sizes": "1676x848",
+          "type": "image/png",
+          "form_factor": "wide"
+      },
+      {
+          "src": "/images/icons/screenshot-mobile.png",
+          "sizes": "349x757",
+          "type": "image/png",
+          "form_factor": "narrow"
+      }
+  ]
+  }
+  

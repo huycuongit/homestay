@@ -1,0 +1,35 @@
+{
+    "name": "xaylapdienhoanggiang.com",
+    "short_name": "HOANG GIANG",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#1993E6",
+    "theme_color": "#1993E6",
+    "description": "Website Xay lap dien lanh Hoang Giang.",
+    "icons": [
+        {
+            "src": "/assets/favicon/android-chrome-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/assets/favicon/android-chrome-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ],
+    "screenshots": [
+        {
+            "src": "/assets/favicon/screenshot-desktop.png",
+            "sizes": "3024x1486",
+            "type": "image/png",
+            "form_factor": "wide"
+        },
+        {
+            "src": "/assets/favicon/screenshot-mobile.png",
+            "sizes": "742x1310",
+            "type": "image/png",
+            "form_factor": "narrow"
+        }
+    ]
+}

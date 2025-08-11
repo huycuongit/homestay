@@ -1,0 +1,854 @@
+body {
+    background: #ffffff !important;
+}
+
+.disable-link .page-link {
+    pointer-events: none;
+    cursor: not-allowed;
+    text-decoration: none;
+    color: var(--Grey-color-3, #9b9b9b) !important;
+    border-color: var(--Grey-color-3, #9b9b9b) !important;
+}
+
+.carousel-control-next,
+.carousel-control-prev {
+    width: 90px;
+}
+
+@media (min-width: 1200px) {
+    body {
+        background: #fff;
+    }
+
+    /***** gallary CSS *****/
+    .gallery-title {
+        font-weight: 400;
+        font-style: Regular;
+        font-size: 48px;
+        leading-trim: NONE;
+        line-height: 130%;
+        letter-spacing: 0%;
+        color: var(--main-color);
+    }
+
+    .gallery-des {
+        font-weight: 400;
+        font-style: Regular;
+        font-size: 18px;
+        leading-trim: NONE;
+        line-height: 140%;
+        letter-spacing: 0%;
+        color: var(--Grey-color);
+    }
+    #gallery-main-img img{
+        width: 100%;
+        max-height: 388px;
+        object-fit: cover;
+        object-position: center;
+      }
+      
+    #gallery-images img {
+        object-fit: cover;
+        height: auto;
+        transition: transform 0.3s ease;
+        max-height: 318px;
+        width: 100%;
+    }
+
+    #gallery-images img:hover {
+        transform: scale(1.03);
+    }
+
+    .custom-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        /* khoảng cách giữa chữ và icon */
+        font-family: "Manrope", sans-serif;
+        /* nếu bạn đã import */
+        font-weight: 600;
+        transition: all 0.25s ease;
+        background-color: var(--main-color);
+        color: var(--sub-color);
+        text-decoration: none;
+    }
+
+    .custom-button i {
+        transition: transform 0.25s ease;
+    }
+
+    .custom-button:hover i {
+        transform: translateX(4px);
+        /* icon dịch qua phải khi hover */
+    }
+
+    /***** End gallary CSS *****/
+
+    /***** project CSS *****/
+    #project {
+        padding: 40px 0;
+        background-color: var(--main-color-1);
+    }
+
+    .project-section-title {
+        font-weight: 400;
+        font-style: Regular;
+        font-size: 64px;
+        leading-trim: NONE;
+        line-height: 130%;
+        letter-spacing: 0%;
+
+        color: var(--main-color);
+    }
+
+    .project-des {
+        font-weight: 400;
+        font-style: Regular;
+        font-size: 18px;
+        leading-trim: NONE;
+        line-height: 140%;
+        letter-spacing: 0%;
+        color: var(--Grey-color);
+    }
+
+    #project img {
+        object-fit: cover;
+        height: auto;
+        transition: transform 0.3s ease;
+    }
+    .img-1, .img-2 {
+        max-height: 374px;
+        object-fit: cover;
+    }
+    #project img:hover {
+        transform: scale(1.03);
+    }
+
+    .custom-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        /* khoảng cách giữa chữ và icon */
+        font-family: "Manrope", sans-serif;
+        /* nếu bạn đã import */
+        font-weight: 600;
+        transition: all 0.25s ease;
+        background-color: var(--main-color);
+        color: var(--sub-color);
+        text-decoration: none;
+    }
+
+    .custom-button i {
+        transition: transform 0.25s ease;
+    }
+
+    .custom-button:hover i {
+        transform: translateX(4px);
+        /* icon dịch qua phải khi hover */
+    }
+
+    #project-button {
+        background-color: var(--sub-color);
+        color: var(--main-color);
+    }
+
+    /***** End project CSS *****/
+    /***** service CSS *****/
+    #services {}
+
+    .services-title {
+        font-weight: 400;
+        font-style: Regular;
+        font-size: 64px;
+        leading-trim: NONE;
+        line-height: 130%;
+        letter-spacing: 0%;
+
+        color: var(--main-color);
+    }
+
+    .services-des {
+        font-weight: 400;
+        font-style: Regular;
+        font-size: 18px;
+        leading-trim: NONE;
+        line-height: 140%;
+        letter-spacing: 0%;
+        color: var(--Grey-color);
+    }
+    .services-card img {
+        max-height: 282px;
+        object-fit: cover;
+        border-radius: 0px;
+    }
+    .services-card-title {
+        font-family: Manrope;
+        font-weight: 700;
+        font-style: Bold;
+        font-size: 25px;
+        leading-trim: NONE;
+        line-height: 130%;
+        letter-spacing: 0%;
+        color: var(--main-color);
+
+    }
+
+    .services-card-des {
+        font-family: Manrope;
+        font-weight: 400;
+        font-style: Regular;
+        font-size: 16px;
+        leading-trim: NONE;
+        line-height: 140%;
+        letter-spacing: 0%;
+        color: var(--Grey-color);
+
+        display: -webkit-box;
+        -webkit-line-clamp: 4; /* Giới hạn 4 dòng */
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-height: 89.5px;
+        height: 100%;
+    }
+
+    .services-link {
+        font-family: Manrope;
+        font-weight: 400;
+        font-style: Regular;
+        font-size: 18px;
+        leading-trim: NONE;
+        line-height: 100%;
+        letter-spacing: 4%;
+        color: var(--main-color);
+        text-decoration: none;
+    }
+
+    .services-arrow {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        font-size: 14px;
+        transition: background 0.3s ease, transform 0.3s ease;
+        background-color: var(--main-color);
+        color: #fff;
+    }
+
+    .services-link:hover .services-arrow {
+        transform: translateX(4px);
+        background-color: var(--sub-color);
+    }
+
+    /***** End service CSS *****/
+    /***** brand CSS *****/
+    #brand {
+        background-color: var(--main-color-1);
+    }
+
+    .brand-title {
+        font-style: Bold;
+        font-size: 40px;
+        leading-trim: NONE;
+        line-height: 45px;
+        letter-spacing: 0%;
+        color: var(--main-color);
+    }
+
+    .brand-des {
+        font-weight: 400;
+        font-style: Regular;
+        font-size: 18px;
+        leading-trim: NONE;
+        letter-spacing: 0%;
+        vertical-align: middle;
+
+        color: var(--Grey-color);
+    }
+
+    #brand-button {
+        font-family: Manrope;
+        font-weight: 400;
+        font-style: Regular;
+        font-size: 18px;
+        leading-trim: NONE;
+        line-height: 100%;
+        letter-spacing: 4%;
+        color: var(--main-color);
+        background-color: var(--sub-color);
+    }
+
+    .brand-image {
+        box-shadow: 0px 4px 20px 6px #91D2FE;
+        max-height: 500px;
+    }
+
+    .brand-features li {
+        position: relative;
+        padding-left: 24px;
+        list-style: none;
+    }
+
+    .brand-features li::before {
+        content: "\f560";
+        /* fa-circle-check */
+        font-family: "Font Awesome 6 Free";
+        /* Bắt buộc! */
+        font-weight: 900;
+        /* fa-solid dùng weight 900 */
+        position: absolute;
+        left: 0;
+        top: 0.1em;
+        color: #28a745;
+        font-size: 1rem;
+    }
+
+    /***** End brand CSS *****/
+}
+@media (min-width: 769px) and (max-width: 1199px) {
+    body {
+        background: #fff;
+    }
+
+    /***** gallary CSS *****/
+    .gallery-title {
+        font-weight: 400;
+        font-style: Regular;
+        font-size: 48px;
+        leading-trim: NONE;
+        line-height: 130%;
+        letter-spacing: 0%;
+        color: var(--main-color);
+    }
+
+    .gallery-des {
+        font-weight: 400;
+        font-style: Regular;
+        font-size: 18px;
+        leading-trim: NONE;
+        line-height: 140%;
+        letter-spacing: 0%;
+        color: var(--Grey-color);
+    }
+    #gallery-main-img img{
+        width: 100%;
+        max-height: 388px;
+        object-fit: cover;
+        object-position: center;
+      }
+      
+    #gallery-images img {
+        object-fit: cover;
+        height: auto;
+        transition: transform 0.3s ease;
+        max-height: 318px;
+        width: 100%;
+    }
+
+    #gallery-images img:hover {
+        transform: scale(1.03);
+    }
+
+    .custom-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        /* khoảng cách giữa chữ và icon */
+        font-family: "Manrope", sans-serif;
+        /* nếu bạn đã import */
+        font-weight: 600;
+        transition: all 0.25s ease;
+        background-color: var(--main-color);
+        color: var(--sub-color);
+        text-decoration: none;
+    }
+
+    .custom-button i {
+        transition: transform 0.25s ease;
+    }
+
+    .custom-button:hover i {
+        transform: translateX(4px);
+        /* icon dịch qua phải khi hover */
+    }
+
+    /***** End gallary CSS *****/
+
+    /***** project CSS *****/
+    #project {
+        padding: 40px 0;
+        background-color: var(--main-color-1);
+    }
+
+    .project-section-title {
+        font-weight: 400;
+        font-style: Regular;
+        font-size: 64px;
+        leading-trim: NONE;
+        line-height: 130%;
+        letter-spacing: 0%;
+
+        color: var(--main-color);
+    }
+
+    .project-des {
+        font-weight: 400;
+        font-style: Regular;
+        font-size: 18px;
+        leading-trim: NONE;
+        line-height: 140%;
+        letter-spacing: 0%;
+        color: var(--Grey-color);
+    }
+
+    #project img {
+        object-fit: cover;
+        height: auto;
+        transition: transform 0.3s ease;
+    }
+
+    #project img:hover {
+        transform: scale(1.03);
+    }
+
+    .custom-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        /* khoảng cách giữa chữ và icon */
+        font-family: "Manrope", sans-serif;
+        /* nếu bạn đã import */
+        font-weight: 600;
+        transition: all 0.25s ease;
+        background-color: var(--main-color);
+        color: var(--sub-color);
+        text-decoration: none;
+    }
+
+    .custom-button i {
+        transition: transform 0.25s ease;
+    }
+
+    .custom-button:hover i {
+        transform: translateX(4px);
+        /* icon dịch qua phải khi hover */
+    }
+
+    #project-button {
+        background-color: var(--sub-color);
+        color: var(--main-color);
+    }
+
+    /***** End project CSS *****/
+    /***** service CSS *****/
+    #services {}
+
+    .services-title {
+        font-weight: 400;
+        font-style: Regular;
+        font-size: 64px;
+        leading-trim: NONE;
+        line-height: 130%;
+        letter-spacing: 0%;
+
+        color: var(--main-color);
+    }
+
+    .services-des {
+        font-weight: 400;
+        font-style: Regular;
+        font-size: 18px;
+        leading-trim: NONE;
+        line-height: 140%;
+        letter-spacing: 0%;
+        color: var(--Grey-color);
+    }
+
+    .services-card-title {
+        font-family: Manrope;
+        font-weight: 700;
+        font-style: Bold;
+        font-size: 25px;
+        leading-trim: NONE;
+        line-height: 130%;
+        letter-spacing: 0%;
+        color: var(--main-color);
+
+    }
+
+    .services-card-des {
+        font-family: Manrope;
+        font-weight: 400;
+        font-style: Regular;
+        font-size: 16px;
+        leading-trim: NONE;
+        line-height: 140%;
+        letter-spacing: 0%;
+        color: var(--Grey-color);
+    }
+
+    .services-link {
+        font-family: Manrope;
+        font-weight: 400;
+        font-style: Regular;
+        font-size: 18px;
+        leading-trim: NONE;
+        line-height: 100%;
+        letter-spacing: 4%;
+        color: var(--main-color);
+        text-decoration: none;
+    }
+
+    .services-arrow {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        font-size: 14px;
+        transition: background 0.3s ease, transform 0.3s ease;
+        background-color: var(--main-color);
+        color: #fff;
+    }
+
+    .services-link:hover .services-arrow {
+        transform: translateX(4px);
+        background-color: var(--sub-color);
+    }
+
+    /***** End service CSS *****/
+    /***** brand CSS *****/
+    #brand {
+        background-color: var(--main-color-1);
+    }
+
+    .brand-title {
+        font-style: Bold;
+        font-size: 40px;
+        leading-trim: NONE;
+        line-height: 45px;
+        letter-spacing: 0%;
+        color: var(--main-color);
+    }
+
+    .brand-des {
+        font-weight: 400;
+        font-style: Regular;
+        font-size: 18px;
+        leading-trim: NONE;
+        letter-spacing: 0%;
+        vertical-align: middle;
+
+        color: var(--Grey-color);
+    }
+
+    #brand-button {
+        font-family: Manrope;
+        font-weight: 400;
+        font-style: Regular;
+        font-size: 18px;
+        leading-trim: NONE;
+        line-height: 100%;
+        letter-spacing: 4%;
+        color: var(--main-color);
+        background-color: var(--sub-color);
+    }
+
+    .brand-image {
+        box-shadow: 0px 4px 20px 6px #91D2FE;
+        max-height: 500px;
+    }
+
+    .brand-features li {
+        position: relative;
+        padding-left: 24px;
+        list-style: none;
+    }
+
+    .brand-features li::before {
+        content: "\f560";
+        /* fa-circle-check */
+        font-family: "Font Awesome 6 Free";
+        /* Bắt buộc! */
+        font-weight: 900;
+        /* fa-solid dùng weight 900 */
+        position: absolute;
+        left: 0;
+        top: 0.1em;
+        color: #28a745;
+        font-size: 1rem;
+    }
+
+    /***** End brand CSS *****/
+}
+@media (max-width: 768px) {
+    body {
+        background: #fff;
+    }
+
+    /***** gallary CSS *****/
+    .gallery-title {
+        font-weight: 400;
+        font-style: Regular;
+        font-size: 48px;
+        leading-trim: NONE;
+        line-height: 130%;
+        letter-spacing: 0%;
+        color: var(--main-color);
+    }
+
+    .gallery-des {
+        font-weight: 400;
+        font-style: Regular;
+        font-size: 18px;
+        leading-trim: NONE;
+        line-height: 140%;
+        letter-spacing: 0%;
+        color: var(--Grey-color);
+    }
+    #gallery-main-img img{
+        width: 100%;
+        max-height: 388px;
+        object-fit: cover;
+        object-position: center;
+      }
+      
+    #gallery-images img {
+        object-fit: cover;
+        height: auto;
+        transition: transform 0.3s ease;
+        max-height: 318px;
+        width: 100%;
+    }
+
+    #gallery-images img:hover {
+        transform: scale(1.03);
+    }
+
+    .custom-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        /* khoảng cách giữa chữ và icon */
+        font-family: "Manrope", sans-serif;
+        /* nếu bạn đã import */
+        font-weight: 600;
+        transition: all 0.25s ease;
+        background-color: var(--main-color);
+        color: var(--sub-color);
+        text-decoration: none;
+    }
+
+    .custom-button i {
+        transition: transform 0.25s ease;
+    }
+
+    .custom-button:hover i {
+        transform: translateX(4px);
+        /* icon dịch qua phải khi hover */
+    }
+
+    /***** End gallary CSS *****/
+
+    /***** project CSS *****/
+    #project {
+        padding: 40px 0;
+        background-color: var(--main-color-1);
+    }
+
+    .project-section-title {
+        font-weight: 400;
+        font-style: Regular;
+        font-size: 35px;
+        leading-trim: NONE;
+        line-height: 130%;
+        letter-spacing: 0%;
+
+        color: var(--main-color);
+    }
+
+    .project-des {
+        font-weight: 400;
+        font-style: Regular;
+        font-size: 18px;
+        leading-trim: NONE;
+        line-height: 140%;
+        letter-spacing: 0%;
+        color: var(--Grey-color);
+    }
+
+    #project img {
+        object-fit: cover;
+        height: auto;
+        transition: transform 0.3s ease;
+    }
+
+    #project img:hover {
+        transform: scale(1.03);
+    }
+
+    .custom-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        /* khoảng cách giữa chữ và icon */
+        font-family: "Manrope", sans-serif;
+        /* nếu bạn đã import */
+        font-weight: 600;
+        transition: all 0.25s ease;
+        background-color: var(--main-color);
+        color: var(--sub-color);
+        text-decoration: none;
+    }
+
+    .custom-button i {
+        transition: transform 0.25s ease;
+    }
+
+    .custom-button:hover i {
+        transform: translateX(4px);
+        /* icon dịch qua phải khi hover */
+    }
+
+    #project-button {
+        background-color: var(--sub-color);
+        color: var(--main-color);
+    }
+
+    /***** End project CSS *****/
+    /***** service CSS *****/
+    #services {}
+
+    .services-title {
+        font-weight: 400;
+        font-style: Regular;
+        font-size: 64px;
+        leading-trim: NONE;
+        line-height: 130%;
+        letter-spacing: 0%;
+
+        color: var(--main-color);
+    }
+
+    .services-des {
+        font-weight: 400;
+        font-style: Regular;
+        font-size: 18px;
+        leading-trim: NONE;
+        line-height: 140%;
+        letter-spacing: 0%;
+        color: var(--Grey-color);
+    }
+
+    .services-card-title {
+        font-family: Manrope;
+        font-weight: 700;
+        font-style: Bold;
+        font-size: 25px;
+        leading-trim: NONE;
+        line-height: 130%;
+        letter-spacing: 0%;
+        color: var(--main-color);
+
+    }
+
+    .services-card-des {
+        font-family: Manrope;
+        font-weight: 400;
+        font-style: Regular;
+        font-size: 16px;
+        leading-trim: NONE;
+        line-height: 140%;
+        letter-spacing: 0%;
+        color: var(--Grey-color);
+    }
+
+    .services-link {
+        font-family: Manrope;
+        font-weight: 400;
+        font-style: Regular;
+        font-size: 18px;
+        leading-trim: NONE;
+        line-height: 100%;
+        letter-spacing: 4%;
+        color: var(--main-color);
+        text-decoration: none;
+    }
+
+    .services-arrow {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        font-size: 14px;
+        transition: background 0.3s ease, transform 0.3s ease;
+        background-color: var(--main-color);
+        color: #fff;
+    }
+
+    .services-link:hover .services-arrow {
+        transform: translateX(4px);
+        background-color: var(--sub-color);
+    }
+
+    /***** End service CSS *****/
+    /***** brand CSS *****/
+    #brand {
+        background-color: var(--main-color-1);
+    }
+
+    .brand-title {
+        font-style: Bold;
+        font-size: 40px;
+        leading-trim: NONE;
+        line-height: 45px;
+        letter-spacing: 0%;
+        color: var(--main-color);
+    }
+
+    .brand-des {
+        font-weight: 400;
+        font-style: Regular;
+        font-size: 18px;
+        leading-trim: NONE;
+        letter-spacing: 0%;
+        vertical-align: middle;
+
+        color: var(--Grey-color);
+    }
+
+    #brand-button {
+        font-family: Manrope;
+        font-weight: 400;
+        font-style: Regular;
+        font-size: 18px;
+        leading-trim: NONE;
+        line-height: 100%;
+        letter-spacing: 4%;
+        color: var(--main-color);
+        background-color: var(--sub-color);
+    }
+
+    .brand-image {
+        box-shadow: 0px 4px 20px 6px #91D2FE;
+        max-height: 500px;
+    }
+
+    .brand-features li {
+        position: relative;
+        padding-left: 24px;
+        list-style: none;
+    }
+
+    .brand-features li::before {
+        content: "\f560";
+        /* fa-circle-check */
+        font-family: "Font Awesome 6 Free";
+        /* Bắt buộc! */
+        font-weight: 900;
+        /* fa-solid dùng weight 900 */
+        position: absolute;
+        left: 0;
+        top: 0.1em;
+        color: #28a745;
+        font-size: 1rem;
+    }
+
+    /***** End brand CSS *****/
+}
