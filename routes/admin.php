@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\BranchController;
 use App\Http\Controllers\Admin\CommitController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
@@ -7,6 +8,7 @@ use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\Admin\LoginController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GalleryController;
+use App\Http\Controllers\Admin\HomestayController;
 // Admin Routers new
 use App\Http\Controllers\Admin\System\SystemController;
 
@@ -16,6 +18,8 @@ use App\Http\Controllers\Admin\ImageController;
 use App\Http\Controllers\Admin\ServiceController;
 use App\Http\Controllers\Admin\PageController;
 use App\Http\Controllers\Admin\NewsController;
+use App\Http\Controllers\Admin\Province\ProvinceController;
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -111,13 +115,21 @@ Route::group(['middleware' => 'authadmin'], function () {
                 ->parameters([
                     'images' => 'id',
                 ]);
-            Route::get('branches/datatables', [ImageController::class, 'datatables'])->name('admin.branches.datatables');
-            Route::resource('branches', ImageController::class)
+            Route::get('homestays/datatables', [HomestayController::class, 'datatables'])->name('admin.homestays.datatables');
+            Route::resource('homestays', HomestayController::class)
+                ->names('admin.homestays')
+                ->parameters([
+                    'homestays' => 'id',
+                ]);
+
+            Route::get('branches/datatables', [BranchController::class, 'datatables'])->name('admin.branches.datatables');
+            Route::resource('branches', BranchController::class)
                 ->names('admin.branches')
                 ->parameters([
                     'branches' => 'id',
                 ]);
-
+                Route::get('/provinces/{id}', [ProvinceController::class, 'show'])
+                ->name('admin.provinces.show');
             Route::controller(SystemController::class)->prefix('/systems')->as('admin.systems.')->group(function () {
                 Route::get('/generals', 'general')->name('generals');
                 Route::get('/apis', 'apis')->name('apis');

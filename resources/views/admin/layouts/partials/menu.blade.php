@@ -131,6 +131,33 @@
                 </ul>
             </li>
         @endif
+        @if (userHasAnyPermission(['admin.homestays.index']))
+        <li class="menu-header small">
+            <span class="menu-header-text" data-i18n="DANH MỤC">Homestay</span>
+        </li>
+        <li class="menu-item {{ request()->routeIs('admin.homestays*') ? 'active open' : '' }}">
+            <a href="javascript:void(0);" class="menu-link menu-toggle">
+                <i class="menu-icon ti ti-comet"></i><div data-i18n="Danh mục">Homestay</Div>
+            </a>
+            <ul class="menu-sub">
+                @if (userHasPermission('admin.homestays.create'))
+                    <li class="menu-item {{ request()->routeIs('admin.homestays.create') ? 'active' : '' }}">
+                        <a href="{{ route('admin.homestays.create') }}" class="menu-link">
+                            <div data-i18n="Phòng ban">Tạo Homestay</div>
+                        </a>
+                    </li>
+                @endif
+                @if (userHasPermission('admin.homestays.index'))
+                    <li
+                        class="menu-item {{ request()->routeIs('admin.homestays.index') | request()->routeIs('admin.homestays.edit') ? 'active' : '' }}">
+                        <a href="{{ route('admin.homestays.index') }}" class="menu-link">
+                            <div data-i18n="Phòng ban">DS Homestay</div>
+                        </a>
+                    </li>
+                @endif
+            </ul>
+        </li>
+    @endif
         <!-- Categories -->
         @if (userHasAnyPermission([
             ]))

@@ -24,6 +24,8 @@ use App\Repositories\GalleryRepository;
 use App\Repositories\GalleryRepositoryInterface;
 use App\Repositories\NewsRepositoryInterface;
 use App\Repositories\NewsRepository;
+use App\Repositories\Province\ProvinceRepository;
+use App\Repositories\Province\ProvinceRepositoryInterface;
 use App\Repositories\ServiceRepository;
 use App\Repositories\ServiceRepositoryInterface;
 
@@ -45,6 +47,7 @@ class RepositoryServiceProvider extends ServiceProvider
 
         $this->app->bind(UserRepositoryInterface::class, UserRepository::class);
         $this->app->bind(BranchRepositoryInterface::class, BranchRepository::class);
+        $this->app->bind(ProvinceRepositoryInterface::class, ProvinceRepository::class);
         $this->app->bind(RoleRepositoryInterface::class, RoleRepository::class);
 
         $this->app->bind(PageRepositoryInterface::class, PageRepository::class);

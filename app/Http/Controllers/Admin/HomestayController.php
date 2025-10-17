@@ -5,14 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use App\Repositories\BranchRepositoryInterface;
-use App\Http\Requests\Admin\BranchStoreRequest;
+use App\Http\Requests\Admin\homestaystoreRequest;
 use App\Http\Requests\Admin\HomestayUpdateRequest;
-use App\Models\Province;
 use Illuminate\Http\Request;
 use DataTables;
 
 
-class BranchController extends Controller
+class HomestayController extends Controller
 {
     protected $branchRepository;
 
@@ -29,20 +28,21 @@ class BranchController extends Controller
         $data = [
             'permissions' => $permissions
         ];
-        return view('admin.branches.index')
+        return view('admin.homestays.index')
             ->with($data);
     }
+
     public function create()
     {
-        $provinces = Province::orderBy('name')->get(['id', 'name']);
-    
-        return view('admin.branches.form', compact('provinces'));
+        $data = [];
+        return view('admin.homestays.form')
+            ->with($data);
     }
 
     public function show($id)
     {
         $data = $this->branchRepository->find($id);
-        return view('admin.branches.form', compact('data'));
+        return view('admin.homestays.form', compact('data'));
     }
 
     public function datatables(Request $request)
@@ -79,11 +79,11 @@ class BranchController extends Controller
             'data' => $data,
             'metaData' => $metaData
         ];
-        return view('admin.branches.form')
+        return view('admin.homestays.form')
             ->with($params);
     }
 
-    public function store(BranchStoreRequest $request)
+    public function store(HomestayStoreRequest $request)
     {
         $data = $request->input();
         $new = $this->branchRepository->create($data);
@@ -94,7 +94,7 @@ class BranchController extends Controller
                 'id' => $id
             ], 200);
         }
-        return redirect()->route('admin.branches.edit', [
+        return redirect()->route('admin.homestays.edit', [
             'id' => $id
         ])->with(
             'success',
@@ -113,7 +113,7 @@ class BranchController extends Controller
             ], 200);
         }
         return redirect()->route(
-            'admin.branches.edit',
+            'admin.homestays.edit',
             [
                 'id' => $id
             ]
@@ -133,7 +133,7 @@ class BranchController extends Controller
     {
         $filters = $request->all();
         $events = $this->branchRepository->filter($filters);
-        return view('admin.branches.index', compact('events'));
+        return view('admin.homestays.index', compact('events'));
     }
 
     public function getActive()

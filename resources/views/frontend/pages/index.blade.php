@@ -4,190 +4,131 @@
 @endSection
 
 @push('css')
-    <link rel="preload" href="{{ asset('assets/css/home.css') }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="{{ asset('assets/css/home.css') }}"></noscript>
+    <link rel="preload" href="{{ asset('assets/css/home.css') }}" as="style"
+        onload="this.onload=null;this.rel='stylesheet'">
+    <noscript>
+        <link rel="stylesheet" href="{{ asset('assets/css/home.css') }}">
+    </noscript>
     <style>
     </style>
 @endpush
-
 @section('content')
-    <section id="banner-section">
-        <div class="">
-            <div class="align-items-center">
-                <div class="col-md-12 image">
-                    <img src="{{ asset('assets/imgs/banner-home.jpg') }}" alt="Banner" fetchpriority="high">
-                </div>
-            </div>
-        </div>
-    </section>
-    <x-commit-section :arr-setups="$arrSetups" :commits="$commits" />
-
-
-    <section id="gallery" class="py-5 bg-white">
+    <section id="checkin-section" class="py-5 bg-white">
         <div class="container">
-            <div class="row align-items-center mb-4">
-                <div class="col-lg-4 mb-4" id="gallery-title-des">
-                    <div class="gallery-title">
-                        {!! checkValue($arrSetups, 'gallery_title') !!}
+            <div class="row align-items-center">
 
-                    </div>
-                    <div class="gallery-des">
-                        {!! checkValue($arrSetups, 'gallery_description') !!}
-
-                    </div>
-                    <a href="{{ route('page.slug', 'thu-vien-anh') }}" class="mt-3 px-4 py-2 custom-button">
-                        Xem thêm <i class="fa-regular fa-circle-right"></i>
-                    </a>
-
-                </div>
-
-                <!-- Ảnh lớn -->
-                <div class="col-lg-8" id="gallery-main-img">
-                    <img src="{{ isset($arrSetups) && isset($arrSetups['gallery_img_1']) ? Storage::url($arrSetups['gallery_img_1']) : '' }}" alt="Ảnh hoạt động 1" class="img-fluid w-100 shadow-sm" >
-                </div>
-            </div>
-
-            <!-- Ảnh nhỏ bên dưới -->
-            <div class="row g-3" id="gallery-images">
-                <div class="col-md-4">
-                    <img src="{{ isset($arrSetups) && isset($arrSetups['gallery_img_2']) ? Storage::url($arrSetups['gallery_img_2']) : '' }}" alt="Ảnh hoạt động 2" class="img-fluid w-100 shadow-sm">
-                </div>
-                <div class="col-md-4">
-                    <img src="{{ isset($arrSetups) && isset($arrSetups['gallery_img_3']) ? Storage::url($arrSetups['gallery_img_3']) : '' }}" alt="Ảnh hoạt động 3" class="img-fluid w-100 shadow-sm">
-                </div>
-                <div class="col-md-4">
-                    <img src="{{ isset($arrSetups) && isset($arrSetups['gallery_img_4']) ? Storage::url($arrSetups['gallery_img_4']) : '' }}" alt="Ảnh hoạt động 4" class="img-fluid w-100 shadow-sm">
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="project" class="project-section">
-        <div class="container">
-            <div class="row align-items-center mb-4">
-                <div class="col-md-8">
-                    <h2 class="project-section-title">
-                        {!! checkValue($arrSetups, 'project_title') !!}
-                        
-                    </h2>
-                    <div class="project-des">
-                        {!! checkValue($arrSetups, 'project_description') !!}
-                    </div>
-                </div>
-                <div class="col-md-4 text-md-end mt-3 mt-md-0">
-                    <a href="{{ route('page.slug', 'thu-vien-anh') }}" id="project-button" class="mt-3 px-4 py-2 custom-button">
-                        Xem thêm <i class="fa-regular fa-circle-right"></i>
-                    </a>
-                </div>
-            </div>
-
-            <div class="row g-3">
-                <!-- Repeat each image item -->
-                <div class="col-12 col-md-6">
-                    <div class="image-wrapper">
-                        <img src="{{ isset($arrSetups) && isset($arrSetups['project_img_1']) ? Storage::url($arrSetups['project_img_1']) : '' }}" class="img-fluid w-100 img-1" alt="Công trình 1">
-                    </div>
-                </div>
-
-                <div class="col-12 col-md-6">
-                    <div class="image-wrapper ">
-                        <img src="{{ isset($arrSetups) && isset($arrSetups['project_img_2']) ? Storage::url($arrSetups['project_img_2']) : '' }}" class="img-fluid w-100 img-2" alt="Công trình 2">
-                    </div>
-                </div>
-
-                <div class="col-12 col-md-4">
-                    <div class="image-wrapper">
-                        <img src="{{ isset($arrSetups) && isset($arrSetups['project_img_3']) ? Storage::url($arrSetups['project_img_3']) : '' }}" class="img-fluid w-100" alt="Công trình 3">
-                    </div>
-                </div>
-
-                <div class="col-12 col-md-4">
-                    <div class="image-wrapper">
-                        <img src="{{ isset($arrSetups) && isset($arrSetups['project_img_4']) ? Storage::url($arrSetups['project_img_4']) : '' }}" class="img-fluid w-100" alt="Công trình 4">
-                    </div>
-                </div>
-
-                <div class="col-12 col-md-4">
-                    <div class="image-wrapper">
-                        <img src="{{ isset($arrSetups) && isset($arrSetups['project_img_5']) ? Storage::url($arrSetups['project_img_5']) : '' }}" class="img-fluid w-100" alt="Công trình 5">
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-    <section id="services" class="services-section py-5 bg-white">
-        <div class="container">
-            <div class="mb-5">
-                <div class="services-title fw-bold">
-                    {!! checkValue($arrSetups, 'service_title') !!}
-                </div>
-                <div class="services-des mt-3">
-                    {!! checkValue($arrSetups, 'service_description') !!}
-                </div>
-            </div>
-
-            <div class="row g-4">
-                @foreach ($services as $service)
-                <div class="col-md-4">
-                    <div class="services-card card h-100 border-0 d-flex flex-column gap-3">
-                        <img src="{{ Storage::url($service->avatar)}}" class="services-img card-img-top" alt="Thi công">
-                        <div class="card-body px-0 d-flex flex-column gap-3">
-                            <div class="services-card-title">
-                                {{ checkValue($service, 'title') }}
+                <!-- Ảnh minh hoạ -->
+                <div class="col-md-6 mb-4 mb-md-0">
+                    <div class="position-relative">
+                        <img src="{{ asset('assets/imgs/homestay-room.jpg') }}" alt="Homestay Couple"
+                            class="img-fluid rounded-4 shadow-sm w-100">
+                        <div
+                            class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center">
+                            <div class="text-white text-center"
+                                style="background: rgba(0,0,0,0.35); padding: 10px 20px; border-radius: 12px;">
+                                <h4 class="fw-bold mb-1">Ý Tưởng Hẹn Hò Cho Couple</h4>
+                                <p class="mb-0">Homestay tự check-in, không ngại lễ tân</p>
                             </div>
-                            <div class="services-card-des text-muted">
-                                {{ checkValue($service, 'description') }}
-
-                            </div>
-                            <a href="{{ route('service.detail', $service['slug']) }}" class="services-link btn-link d-inline-flex align-items-center gap-2">
-                                Xem thêm
-                                <div
-                                    class="services-arrow circle-arrow d-inline-flex align-items-center justify-content-center">
-                                    <i class="fa-solid fa-arrow-right"></i>
-                                </div>
-                            </a>
                         </div>
                     </div>
                 </div>
-                @endforeach
+
+                <!-- Nội dung bên phải -->
+                <div class="col-md-6">
+                    <h2 class="fw-bold text-warning mb-4">
+                        Check-in linh hoạt – nghỉ ngơi thoải mái !
+                    </h2>
+
+                    <p>
+                        <strong>Trần Anh The Home</strong> – homestay tiện nghi tại Biên Hòa, Long Thành,
+                        Thủ Dầu Một, Dĩ An.
+                    </p>
+
+                    <ul class="list-unstyled mb-4">
+                        <li>✨ Nội thất hiện đại, đầy đủ tiện ích</li>
+                        <li>🎬 Máy chiếu + Netflix FREE, chill hết đêm</li>
+                        <li>🍳 Bếp nấu riêng, nấu ăn thoải mái như ở nhà</li>
+                        <li>👕 Máy giặt & sấy tiện lợi cho kỳ nghỉ dài ngày</li>
+                        <li>🛏️ Không gian sạch sẽ, ấm cúng</li>
+                        <li>🚗 Vị trí thuận tiện, dễ dàng di chuyển đến TP.HCM</li>
+                    </ul>
+
+                    <!-- Thống kê -->
+                    <div class="d-flex flex-wrap gap-5 mt-4">
+                        <div>
+                            <h3 class="fw-bold text-warning mb-0">70+</h3>
+                            <small class="text-muted">Phòng nghỉ</small>
+                        </div>
+                        <div>
+                            <h3 class="fw-bold text-warning mb-0">1000+</h3>
+                            <small class="text-muted">Lượt đặt phòng</small>
+                        </div>
+                        <div>
+                            <h3 class="fw-bold text-warning mb-0">2000+</h3>
+                            <small class="text-muted">Khách hàng hài lòng</small>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </section>
 
-    <section id="brand" class="brand-section py-5">
+    <section id="top-rooms" class="py-5 bg-light">
         <div class="container">
-          <div class="row align-items-center">
-            <!-- Bên trái: Nội dung -->
-            <div class="col-md-6 brand-content">
-              <h2 class="brand-title mb-3">
-                {!! checkValue($arrSetups, 'brand_title') !!}
-              </h2>
-              <p class="brand-description text-muted">
-                {!! checkValue($arrSetups, 'brand_description') !!}
-              </p>
-      
-              <ul class="brand-features list-unstyled mt-4 d-flex flex-column gap-2">
-                {!! renderCleanList(checkValue($arrSetups, 'brand_content')) !!}
-              </ul>
-      
-              <div class="mt-4">
-                <a href="#footer" id="brand-button" class="mt-3 px-4 py-3 custom-button">
-                    Liên hệ ngay <i class="fa-regular fa-circle-right"></i>
-                </a>
-              </div>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3 class="fw-bold text-warning mb-0">Top phòng “cháy vé”</h3>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-light rounded-circle shadow-sm"><i class="bi bi-arrow-left"></i></button>
+                    <button class="btn btn-light rounded-circle shadow-sm"><i class="bi bi-arrow-right"></i></button>
+                </div>
             </div>
-      
-            <!-- Bên phải: Hình ảnh -->
-            <div class="col-md-6 text-center mt-4 mt-md-0">
-              <div class="brand-image rounded overflow-hidden">
-                <img src="{{ isset($arrSetups) && isset($arrSetups['brand_img_1']) ? Storage::url($arrSetups['brand_img_1']) : '' }}" alt="Cẩu điện" class="img-fluid rounded">
-              </div>
+    
+            <div class="row g-4">
+                {{-- @foreach($topRooms as $room) --}}
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="card border-0 shadow-sm rounded-4 overflow-hidden h-100">
+                        <div class="position-relative">
+                            <img src="{{ asset('storage/'.$room->image) }}" class="card-img-top" alt="{{ $room->name }}">
+                            <span class="position-absolute top-0 start-0 bg-dark text-white px-3 py-1 rounded-end"
+                                  style="font-size: 0.9rem;">{{ $room->tag ?? 'STAYCATION BIÊN HÒA' }}</span>
+                        </div>
+    
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <h5 class="fw-bold mb-0">{{ $room->name }}</h5>
+                                <div class="text-warning">
+                                    <i class="bi bi-star-fill"></i> {{ $room->rating ?? '4.7' }}
+                                </div>
+                            </div>
+                            <p class="small text-muted mb-3">{{ $room->address }}</p>
+    
+                            <div class="d-flex justify-content-between text-muted small mb-3">
+                                <div><i class="bi bi-badge-tm"></i> 1 Bồn tắm</div>
+                                <div><i class="bi bi-projector"></i> 1 Máy chiếu</div>
+                                <div><i class="bi bi-bed"></i> 1 Giường đôi</div>
+                                <div><i class="bi bi-couch"></i> 1 Sofa</div>
+                            </div>
+    
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="fw-bold fs-5 text-dark">{{ number_format($room->price_day, 0, ',', '.') }}đ<span class="text-muted fs-6">/đêm/2 người</span></div>
+                                    <div class="fw-bold text-secondary">{{ number_format($room->price_3h, 0, ',', '.') }}đ<span class="text-muted fs-6">/3h/2 người</span></div>
+                                </div>
+                                <a href="{{ route('booking.show', $room->slug) }}" class="btn btn-warning text-white fw-semibold px-4 py-2 rounded-pill">
+                                    Đặt phòng
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {{-- @endforeach --}}
             </div>
-          </div>
         </div>
-      </section>
-      
-@endSection
+    </section>
+    
+@endsection
+
 
 @section('js')
 @endSection

@@ -238,6 +238,27 @@ return [
         ],
     ],
 
+    'homestays' => [
+        'module_name' => 'Homestay',
+        'routes' => [
+            'index' => [
+                'method_name' => 'Danh sách',
+                'route' => 'admin.homestays.index',
+            ],
+            'create' => [
+                'method_name' => 'Tạo',
+                'route' => 'admin.homestays.create',
+            ],
+            'edit' => [
+                'method_name' => 'Sửa',
+                'route' => 'admin.homestays.edit',
+            ],
+            'destroy' => [
+                'method_name' => 'Xóa',
+                'route' => 'admin.homestays.destroy',
+            ],
+        ],
+    ],
     'branches' => [
         'module_name' => 'Chi nhánh',
         'routes' => [

@@ -7,7 +7,6 @@ use App\Models\System;
 use App\Repositories\BranchRepositoryInterface;
 use App\Repositories\CommitRepositoryInterface;
 use App\Repositories\CompanyHistoryRepositoryInterface;
-use App\Repositories\District\DistrictRepositoryInterface;
 use App\Repositories\DocumentTypeRepositoryInterface;
 use App\Repositories\GalleryRepositoryInterface;
 use App\Repositories\ImageRepositoryInterface;
