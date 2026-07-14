@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 
 import BookingModal from "./components/booking/BookingModal";
+import AuthModal from "./components/auth/AuthModal";
 import FloatingContact from "./components/layout/FloatingContact";
 import Footer from "./components/layout/Footer";
 import Header from "./components/layout/Header";
@@ -57,6 +58,14 @@ import { assetUrl, compactMoney, money } from "./utils/format";
 function getRoomIdFromPath() {
   const match = window.location.pathname.match(/^\/rooms\/(\d+)/);
   return match ? match[1] : null;
+}
+
+function readStoredUser() {
+  try {
+    return JSON.parse(localStorage.getItem("homestay_user") || "null");
+  } catch (error) {
+    return null;
+  }
 }
 
 function App() {
@@ -81,6 +90,13 @@ function App() {
     note: ""
   });
   const [submitting, setSubmitting] = useState(false);
+  const [authUser, setAuthUser] = useState(readStoredUser);
+  const [authToken, setAuthToken] = useState(() => localStorage.getItem("homestay_user_token") || "");
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState("login");
+  const [authForm, setAuthForm] = useState({ name: "", phone: "", email: "", password: "" });
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authNotice, setAuthNotice] = useState(null);
 
   const selectedTotalPreview = useMemo(() => {
     if (!selectedRoom) return 0;
@@ -117,7 +133,12 @@ function App() {
 
   function openBooking(room) {
     setSelectedRoom(room);
-    setBookingForm({ customer_name: "", customer_phone: "", customer_email: "", note: "" });
+    setBookingForm({
+      customer_name: authUser?.name || "",
+      customer_phone: authUser?.phone || "",
+      customer_email: authUser?.email || "",
+      note: ""
+    });
     setNotice(null);
   }
 
@@ -198,6 +219,61 @@ function App() {
     }
   }
 
+  function openAuth(mode = "login") {
+    setAuthMode(mode);
+    setAuthForm({
+      name: authUser?.name || "",
+      phone: authUser?.phone || "",
+      email: authUser?.email || "",
+      password: ""
+    });
+    setAuthNotice(null);
+    setAuthOpen(true);
+  }
+
+  function closeAuth() {
+    if (!authLoading) setAuthOpen(false);
+  }
+
+  function logoutUser() {
+    localStorage.removeItem("homestay_user_token");
+    localStorage.removeItem("homestay_user");
+    setAuthToken("");
+    setAuthUser(null);
+    setNotice({ type: "muted", text: "Da dang xuat tai khoan khach." });
+  }
+
+  async function submitAuth(event) {
+    event.preventDefault();
+    setAuthLoading(true);
+    setAuthNotice(null);
+
+    try {
+      const endpoint = authMode === "login" ? "/auth/login" : "/auth/register";
+      const payload = await apiFetch(endpoint, {
+        method: "POST",
+        body: JSON.stringify({
+          name: authForm.name,
+          phone: authForm.phone,
+          email: authForm.email,
+          username: authForm.phone,
+          password: authForm.password
+        })
+      });
+
+      localStorage.setItem("homestay_user_token", payload.token);
+      localStorage.setItem("homestay_user", JSON.stringify(payload.user));
+      setAuthToken(payload.token);
+      setAuthUser(payload.user);
+      setAuthOpen(false);
+      setNotice({ type: "success", text: `Xin chao ${payload.user?.name || payload.user?.phone || "ban"}!` });
+    } catch (error) {
+      setAuthNotice({ type: "error", text: error.message });
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
   useEffect(() => {
     loadRooms();
   }, []);
@@ -224,7 +300,7 @@ function App() {
 
   return (
     <div className="app-shell">
-      <Header />
+      <Header user={authUser} onLoginClick={() => openAuth("login")} onLogout={logoutUser} />
 
       <main id="top">
         {currentRoomId ? (
@@ -265,6 +341,21 @@ function App() {
         onChangeForm={setBookingForm}
         money={money}
       />
+      {authOpen && (
+        <AuthModal
+          mode={authMode}
+          form={authForm}
+          loading={authLoading}
+          notice={authNotice}
+          onClose={closeAuth}
+          onSubmit={submitAuth}
+          onChange={(field, value) => setAuthForm((current) => ({ ...current, [field]: value }))}
+          onSwitchMode={() => {
+            setAuthMode((current) => (current === "login" ? "register" : "login"));
+            setAuthNotice(null);
+          }}
+        />
+      )}
     </div>
   );
 }

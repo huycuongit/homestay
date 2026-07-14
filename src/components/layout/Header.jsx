@@ -1,6 +1,6 @@
-import { Hotel } from "lucide-react";
+import { Hotel, LogOut, UserRound } from "lucide-react";
 
-function Header() {
+function Header({ user, onLoginClick, onLogout }) {
   return (
     <header className="topbar">
       <a className="brand" href="#top" aria-label="Homestay Booking">
@@ -14,6 +14,18 @@ function Header() {
         <a href="#rooms">Thu Dau Mot</a>
         <a href="#rooms">Di An</a>
         <a href="#contact">Lien he</a>
+        {user ? (
+          <button className="nav-auth-btn" type="button" onClick={onLogout}>
+            <UserRound size={15} />
+            {user.name || user.phone || "Tai khoan"}
+            <LogOut size={14} />
+          </button>
+        ) : (
+          <button className="nav-auth-btn" type="button" onClick={onLoginClick}>
+            <UserRound size={15} />
+            Dang nhap
+          </button>
+        )}
         <a className="nav-cta" href="#booking">Dat phong ngay!</a>
       </nav>
     </header>
