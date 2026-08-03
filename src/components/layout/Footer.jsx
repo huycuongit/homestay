@@ -4,7 +4,7 @@ function Footer() {
       <div className="footer-inner">
         <div className="footer-main">
           <div className="footer-brand">
-            <h2>Logo</h2>
+            <h2>ftft</h2>
             <p>Our vision is to provide convenience and help increase your sales business.</p>
             <div className="footer-socials" aria-label="Mang xa hoi">
               <a href="#top" aria-label="Facebook">f</a>
@@ -40,7 +40,7 @@ function Footer() {
         </div>
 
         <div className="footer-bottom">
-          <span>©2022 Company Name. All rights reserved</span>
+          <span>©2022 ftft. All rights reserved</span>
           <div>
             <a href="#top">Privacy & Policy</a>
             <a href="#top">Terms & Condition</a>

@@ -18,6 +18,23 @@ export function defaultCheckOut() {
   return formatLocalInput(date);
 }
 
+export function defaultBookingDate() {
+  return localDateKey(new Date());
+}
+
+export function buildSlotDateRange(dateKey, slot) {
+  if (!dateKey || !slot?.start || !slot?.end) return null;
+
+  const start = new Date(`${dateKey}T${slot.start}:00`);
+  const end = new Date(`${dateKey}T${slot.end}:00`);
+  if (slot.crossesMidnight) end.setDate(end.getDate() + 1);
+
+  return {
+    checkIn: formatLocalInput(start),
+    checkOut: formatLocalInput(end)
+  };
+}
+
 export function toApiDate(value) {
   return new Date(value).toISOString();
 }
@@ -32,11 +49,11 @@ export function normalizeDateKey(value) {
   return String(value).slice(0, 10);
 }
 
-export function upcomingBookingDays(count = 8) {
+export function upcomingBookingDays(count = 8, startDateKey) {
   const formatter = new Intl.DateTimeFormat("vi-VN", {
     weekday: "short"
   });
-  const today = new Date();
+  const today = startDateKey ? new Date(`${startDateKey}T00:00:00`) : new Date();
   return Array.from({ length: count }, (_, index) => {
     const date = new Date(today);
     date.setDate(today.getDate() + index);

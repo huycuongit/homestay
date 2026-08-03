@@ -1,14 +1,16 @@
-import { Building2, Film, Loader2, MapPin, Users } from "lucide-react";
-import { heroShots } from "../../data/homeContent";
+import { CalendarDays, Clock, Film, Loader2, MapPin, Search, Users } from "lucide-react";
+import { bookingSlots, heroShots } from "../../data/homeContent";
 
-function HeroSection({ search, loading, onSearch, onUpdateSearch }) {
+function HeroSection({ branches, selectedBranchId, search, loading, onSearch, onBranchChange, onUpdateSearch }) {
+  const visibleSlots = bookingSlots.filter((slot) => slot.type === search.booking_type);
+
   return (
     <section className="hero" id="booking">
       <div className="hero-stage">
         <div className="hero-backdrop">
           <div className="hero-brand">
             <div className="line-logo"><Film size={54} /></div>
-            <h1>COZYNEST HOMESTAY & CINEMA</h1>
+            <h1>ftft HOMESTAY & CINEMA</h1>
             <p>CHILL OUT & MOVIE ON</p>
           </div>
 
@@ -33,34 +35,63 @@ function HeroSection({ search, loading, onSearch, onUpdateSearch }) {
 
         <form className="search-panel" onSubmit={onSearch}>
           <div className="field location-field">
-            <label htmlFor="location"><MapPin size={15} /> Dia diem</label>
-            <div className="fake-input">
-              <Building2 size={18} />
-              <span>115 Duong D9, Thu Dau Mot</span>
-            </div>
+            <label htmlFor="location"><MapPin size={15} /> Địa điểm</label>
+            <select
+              id="location"
+              value={selectedBranchId || ""}
+              onChange={(event) => onBranchChange(event.target.value || null)}
+              required
+            >
+              <option value="">Chọn chi nhánh</option>
+              {branches.map((branch) => (
+                <option key={branch.id} value={branch.id}>
+                  {branch.nav_name || branch.name}
+                </option>
+              ))}
+            </select>
           </div>
+
           <div className="field">
-            <label htmlFor="check_in">Check In</label>
+            <label htmlFor="booking_type"><Clock size={15} /> Loại đặt</label>
+            <select
+              id="booking_type"
+              value={search.booking_type}
+              onChange={(event) => onUpdateSearch("booking_type", event.target.value)}
+            >
+              <option value="hour">Theo 3 tiếng</option>
+              <option value="night">Qua đêm</option>
+            </select>
+          </div>
+
+          <div className="field">
+            <label htmlFor="booking_date"><CalendarDays size={15} /> Ngày</label>
             <input
-              id="check_in"
-              type="datetime-local"
-              value={search.check_in}
-              onChange={(event) => onUpdateSearch("check_in", event.target.value)}
+              id="booking_date"
+              type="date"
+              value={search.booking_date}
+              onChange={(event) => onUpdateSearch("booking_date", event.target.value)}
               required
             />
           </div>
+
           <div className="field">
-            <label htmlFor="check_out">Check Out</label>
-            <input
-              id="check_out"
-              type="datetime-local"
-              value={search.check_out}
-              onChange={(event) => onUpdateSearch("check_out", event.target.value)}
+            <label htmlFor="slot_id"><Clock size={15} /> Khung giờ</label>
+            <select
+              id="slot_id"
+              value={search.slot_id}
+              onChange={(event) => onUpdateSearch("slot_id", event.target.value)}
               required
-            />
+            >
+              {visibleSlots.map((slot) => (
+                <option key={slot.id} value={slot.id}>
+                  {slot.label} {slot.subLabel || ""}
+                </option>
+              ))}
+            </select>
           </div>
+
           <div className="field">
-            <label htmlFor="guests">So luong khach</label>
+            <label htmlFor="guests">Số khách</label>
             <div className="guest-control">
               <Users size={17} />
               <input
@@ -71,13 +102,13 @@ function HeroSection({ search, loading, onSearch, onUpdateSearch }) {
                 onChange={(event) => onUpdateSearch("guests", event.target.value)}
                 required
               />
-              <span>khach</span>
+              <span>khách</span>
             </div>
           </div>
-          <input type="hidden" value={search.booking_type} readOnly />
+
           <button className="primary-btn" type="submit" disabled={loading}>
-            {loading ? <Loader2 className="spin" size={18} /> : <Users size={18} />}
-            Dat phong
+            {loading ? <Loader2 className="spin" size={18} /> : <Search size={18} />}
+            Tìm phòng
           </button>
         </form>
       </div>

@@ -1,11 +1,11 @@
 {
-    "name": "xaylapdienhoanggiang.com",
-    "short_name": "HOANG GIANG",
+    "name": "ftft",
+    "short_name": "ftft",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#1993E6",
     "theme_color": "#1993E6",
-    "description": "Website Xay lap dien lanh Hoang Giang.",
+    "description": "Website ftft.",
     "icons": [
         {
             "src": "/assets/favicon/android-chrome-192x192.png",

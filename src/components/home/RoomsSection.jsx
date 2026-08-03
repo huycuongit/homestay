@@ -9,14 +9,15 @@ import {
   Sofa,
   Star
 } from "lucide-react";
-import { money } from "../../utils/format";
+import { assetUrl, money } from "../../utils/format";
 
-function RoomsSection({ rooms, loading, notice, onOpenBooking, onOpenRoomDetail }) {
+function RoomsSection({ rooms, selectedBranch, loading, notice, onOpenRoomDetail }) {
   return (
     <section className="rooms-section" id="rooms">
       <div className="section-heading">
         <div>
-          <h2>Top phong "chay ve"</h2>
+          <h2>{selectedBranch ? selectedBranch.name : 'Top phong "chay ve"'}</h2>
+          {selectedBranch && <p>{selectedBranch.address}</p>}
         </div>
         <div className="round-actions" aria-hidden="true">
           <button type="button"><ChevronLeft size={18} /></button>
@@ -33,17 +34,17 @@ function RoomsSection({ rooms, loading, notice, onOpenBooking, onOpenRoomDetail 
           {rooms.map((room) => (
             <article className="room-card" key={room.id}>
               <div className="room-image">
-                <img src="https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=700&q=85" alt={room.name} />
-                <span>STAYCATION BIEN HOA</span>
+                <img src={assetUrl(room.main_image)} alt={room.name} />
+                <span>{room.branch?.name || "ftft"}</span>
               </div>
               <div className="room-content">
                 <div className="room-title-row">
                   <button className="room-title-link" type="button" onClick={() => onOpenRoomDetail(room)}>
-                    Libra - 22
+                    {room.name}
                   </button>
                   <strong><Star size={15} fill="currentColor" /> 4.7</strong>
                 </div>
-                <p className="room-address">{room.branch?.address || room.branch?.name || "134/35 Duong Ha Huy Giap, Bien Hoa, Dong Nai"}</p>
+                <p className="room-address">{room.branch?.address || room.branch?.name || "ftft"}</p>
                 <div className="room-amenities">
                   <span><Bath size={16} />Bon tam</span>
                   <span><Projector size={16} />May chieu</span>
@@ -53,8 +54,9 @@ function RoomsSection({ rooms, loading, notice, onOpenBooking, onOpenRoomDetail 
                 <div className="room-prices">
                   <span>{money(room.price_per_night)}<small>/dem/2 nguoi</small></span>
                   <span>{money(room.price_per_hour)}<small>/3h/2 nguoi</small></span>
+                  {room.price_per_day ? <span>{money(room.price_per_day)}<small>/ngay/2 nguoi</small></span> : null}
                 </div>
-                <button className="primary-btn room-book-btn" type="button" onClick={() => onOpenBooking(room)}>
+                <button className="primary-btn room-book-btn" type="button" onClick={() => onOpenRoomDetail(room)}>
                   Dat phong
                 </button>
                 <button className="room-detail-link" type="button" onClick={() => onOpenRoomDetail(room)}>
@@ -65,7 +67,9 @@ function RoomsSection({ rooms, loading, notice, onOpenBooking, onOpenRoomDetail 
           ))}
         </div>
       ) : (
-        <div className="empty-state">Chua co phong phu hop. Hay doi khoang thoi gian hoac so khach.</div>
+        <div className="empty-state">
+          {selectedBranch ? "Chua co phong phu hop. Hay doi so khach hoac chi nhanh." : "Chon chi nhanh de xem phong phu hop."}
+        </div>
       )}
     </section>
   );

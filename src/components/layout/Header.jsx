@@ -1,18 +1,26 @@
 import { Hotel, LogOut, UserRound } from "lucide-react";
 
-function Header({ user, onLoginClick, onLogout }) {
+function Header({ branches, selectedBranchId, user, onBranchSelect, onLoginClick, onLogout }) {
   return (
     <header className="topbar">
-      <a className="brand" href="#top" aria-label="Homestay Booking">
+      <button className="brand brand-button" type="button" onClick={() => onBranchSelect(null)} aria-label="ftft Booking">
         <span className="brand-mark"><Hotel size={18} /></span>
-        <span>BurgerBliss</span>
-      </a>
+        <span>ftft</span>
+      </button>
       <nav className="nav-links" aria-label="Main navigation">
-        <a href="#top">Trang chu</a>
-        <a href="#rooms">Bien Hoa</a>
-        <a href="#rooms">Long Thanh</a>
-        <a href="#rooms">Thu Dau Mot</a>
-        <a href="#rooms">Di An</a>
+        <button className={!selectedBranchId ? "nav-link-btn active" : "nav-link-btn"} type="button" onClick={() => onBranchSelect(null)}>
+          Trang chu
+        </button>
+        {branches.map((branch) => (
+          <button
+            className={String(selectedBranchId || "") === String(branch.id) ? "nav-link-btn active" : "nav-link-btn"}
+            type="button"
+            key={branch.id}
+            onClick={() => onBranchSelect(branch.id)}
+          >
+            {branch.nav_name || branch.name}
+          </button>
+        ))}
         <a href="#contact">Lien he</a>
         {user ? (
           <button className="nav-auth-btn" type="button" onClick={onLogout}>

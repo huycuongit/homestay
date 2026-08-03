@@ -17,7 +17,7 @@ function IntroSection() {
       <div className="intro-copy">
         <h2>Check-in linh hoat - nghi ngoi thoai mai !</h2>
         <p>
-          Tran Anh The Hone - homestay tien nghi tai Bien Hoa, Long Thanh,
+          ftft - homestay tien nghi tai Bien Hoa, Long Thanh,
           Thu Dau Mot, Di An.
         </p>
         <ul>

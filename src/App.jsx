@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { io } from "socket.io-client";
+import useEmblaCarousel from "embla-carousel-react";
 import {
   ArrowLeft,
   ArrowUp,
@@ -7,6 +8,7 @@ import {
   BedDouble,
   Building2,
   CalendarCheck,
+  Check,
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
@@ -40,7 +42,6 @@ import {
   X
 } from "lucide-react";
 
-import BookingModal from "./components/booking/BookingModal";
 import AuthModal from "./components/auth/AuthModal";
 import FloatingContact from "./components/layout/FloatingContact";
 import Footer from "./components/layout/Footer";
@@ -49,10 +50,10 @@ import HeroSection from "./components/home/HeroSection";
 import IntroSection from "./components/home/IntroSection";
 import RoomsSection from "./components/home/RoomsSection";
 import { API_BASE_URL, SOCKET_BASE_URL } from "./config/appConfig";
-import { adminResources, booleanFields, imageFields, numberFields, textareaFields } from "./data/adminConfig";
+import { adminResources, booleanFields, fieldLabels, imageFields, numberFields, textareaFields } from "./data/adminConfig";
 import { bookingSlots } from "./data/homeContent";
 import { apiFetch } from "./services/api";
-import { defaultCheckIn, defaultCheckOut, normalizeDateKey, toApiDate, upcomingBookingDays } from "./utils/date";
+import { buildSlotDateRange, defaultBookingDate, normalizeDateKey, toApiDate, upcomingBookingDays } from "./utils/date";
 import { assetUrl, compactMoney, money } from "./utils/format";
 
 function getRoomIdFromPath() {
@@ -68,18 +69,27 @@ function readStoredUser() {
   }
 }
 
+function getSearchSlotRange(search) {
+  const slot = bookingSlots.find((item) => item.id === search.slot_id && item.type === search.booking_type);
+  return buildSlotDateRange(search.booking_date, slot);
+}
+
 function App() {
   const [currentRoomId, setCurrentRoomId] = useState(getRoomIdFromPath());
   const [isAdminRoute, setIsAdminRoute] = useState(window.location.pathname.startsWith("/admin"));
   const [detailRoom, setDetailRoom] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [search, setSearch] = useState({
-    check_in: defaultCheckIn(),
-    check_out: defaultCheckOut(),
-    booking_type: "night",
+    booking_date: defaultBookingDate(),
+    slot_id: "morning",
+    check_in: "",
+    check_out: "",
+    booking_type: "hour",
     guests: 2
   });
   const [rooms, setRooms] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [selectedBranchId, setSelectedBranchId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState(null);
   const [selectedRoom, setSelectedRoom] = useState(null);
@@ -105,19 +115,31 @@ function App() {
 
   async function loadRooms(event) {
     event?.preventDefault();
+    if (!selectedBranchId) {
+      setRooms([]);
+      setNotice({ type: "muted", text: "Vui lòng chọn chi nhánh trước khi tìm phòng." });
+      return;
+    }
     setLoading(true);
     setNotice(null);
 
     try {
+      const slotRange = getSearchSlotRange(search);
+      if (!slotRange) {
+        setRooms([]);
+        setNotice({ type: "error", text: "Vui lòng chọn ngày và khung giờ hợp lệ." });
+        return;
+      }
       const params = new URLSearchParams({
-        check_in: toApiDate(search.check_in),
-        check_out: toApiDate(search.check_out),
+        check_in: toApiDate(slotRange.checkIn),
+        check_out: toApiDate(slotRange.checkOut),
         guests: String(search.guests)
       });
+      if (selectedBranchId) params.set("branch_id", String(selectedBranchId));
       const payload = await apiFetch(`/rooms/available?${params.toString()}`);
       setRooms(payload.data || []);
       if (!payload.data?.length) {
-        setNotice({ type: "muted", text: "Khong co phong trong theo thoi gian nay. Thu doi ngay hoac so khach." });
+        setNotice({ type: "muted", text: "Không có phòng trống theo chi nhánh, ngày, khung giờ này. Thử đổi slot hoặc số khách." });
       }
     } catch (error) {
       setRooms([]);
@@ -128,7 +150,41 @@ function App() {
   }
 
   function updateSearch(field, value) {
-    setSearch((current) => ({ ...current, [field]: value }));
+    setSearch((current) => {
+      if (field === "booking_type") {
+        const nextSlot = bookingSlots.find((slot) => slot.type === value);
+        return { ...current, booking_type: value, slot_id: nextSlot?.id || "" };
+      }
+      return { ...current, [field]: value };
+    });
+  }
+
+  async function loadHomeContent() {
+    try {
+      const payload = await apiFetch("/home");
+      const branchNames = {
+        "pham-van-thuan-tam-hiep": "Bien Hoa",
+        "ha-huy-giap-trung-dung": "Ha Huy Giap",
+        "chu-van-an-long-thanh": "Long Thanh",
+        "111-d1-chanh-nghia": "Thu Dau Mot",
+        "vo-thi-sau-di-an": "Di An"
+      };
+      setBranches((payload.data?.branches || []).map((branch) => ({
+        ...branch,
+        nav_name: branchNames[branch.slug] || branch.name
+      })));
+    } catch (error) {
+      setNotice({ type: "error", text: error.message });
+    }
+  }
+
+  function selectBranch(branchId, options = {}) {
+    setSelectedBranchId(branchId ? Number(branchId) : null);
+    window.history.pushState({}, "", "/");
+    setCurrentRoomId(null);
+    if (options.scroll !== false) {
+      setTimeout(() => document.getElementById(branchId ? "rooms" : "top")?.scrollIntoView({ behavior: "smooth" }), 0);
+    }
   }
 
   function openBooking(room) {
@@ -275,8 +331,15 @@ function App() {
   }
 
   useEffect(() => {
-    loadRooms();
+    loadHomeContent();
   }, []);
+
+  useEffect(() => {
+    if (!currentRoomId && !isAdminRoute) {
+      setRooms([]);
+      setNotice(null);
+    }
+  }, [selectedBranchId]);
 
   useEffect(() => {
     function handlePopState() {
@@ -300,7 +363,14 @@ function App() {
 
   return (
     <div className="app-shell">
-      <Header user={authUser} onLoginClick={() => openAuth("login")} onLogout={logoutUser} />
+      <Header
+        branches={branches}
+        selectedBranchId={selectedBranchId}
+        user={authUser}
+        onBranchSelect={selectBranch}
+        onLoginClick={() => openAuth("login")}
+        onLogout={logoutUser}
+      />
 
       <main id="top">
         {currentRoomId ? (
@@ -311,17 +381,24 @@ function App() {
             search={search}
             updateSearch={updateSearch}
             onBack={backToHome}
-            onBook={openBooking}
           />
         ) : (
         <>
-        <HeroSection search={search} loading={loading} onSearch={loadRooms} onUpdateSearch={updateSearch} />
+        <HeroSection
+          branches={branches}
+          selectedBranchId={selectedBranchId}
+          search={search}
+          loading={loading}
+          onSearch={loadRooms}
+          onBranchChange={(branchId) => selectBranch(branchId, { scroll: false })}
+          onUpdateSearch={updateSearch}
+        />
         <IntroSection />
         <RoomsSection
           rooms={rooms}
+          selectedBranch={branches.find((branch) => String(branch.id) === String(selectedBranchId))}
           loading={loading}
           notice={notice}
-          onOpenBooking={openBooking}
           onOpenRoomDetail={openRoomDetail}
         />
         </>
@@ -330,17 +407,6 @@ function App() {
 
       <FloatingContact />
       <Footer />
-      <BookingModal
-        room={selectedRoom}
-        search={search}
-        form={bookingForm}
-        totalPreview={selectedTotalPreview}
-        submitting={submitting}
-        onClose={closeBooking}
-        onSubmit={submitBooking}
-        onChangeForm={setBookingForm}
-        money={money}
-      />
       {authOpen && (
         <AuthModal
           mode={authMode}
@@ -364,8 +430,13 @@ function AdminPage() {
   const [token, setToken] = useState(() => localStorage.getItem("homestay_admin_token") || "");
   const [loginForm, setLoginForm] = useState({ username: "admin", password: "admin123" });
   const [activeKey, setActiveKey] = useState(adminResources[0].key);
+  const [adminView, setAdminView] = useState("dashboard");
   const [rows, setRows] = useState([]);
   const [searchText, setSearchText] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("");
+  const [perPage, setPerPage] = useState("10");
+  const [amenityOptions, setAmenityOptions] = useState([]);
   const [selectedRow, setSelectedRow] = useState(null);
   const [form, setForm] = useState({});
   const [loading, setLoading] = useState(false);
@@ -373,10 +444,61 @@ function AdminPage() {
   const [notice, setNotice] = useState(null);
 
   const activeResource = adminResources.find((item) => item.key === activeKey) || adminResources[0];
+  const groupedResources = useMemo(() => {
+    return adminResources.reduce((groups, resource) => {
+      const group = resource.group || "Danh mục";
+      if (!groups[group]) groups[group] = [];
+      groups[group].push(resource);
+      return groups;
+    }, {});
+  }, []);
+  const visibleRows = rows.filter((row) => row.active !== false).length;
+  const inactiveRows = rows.length - visibleRows;
+  const overviewTotal = rows.reduce((sum, row) => sum + Number(row.total_price || row.price_per_night || row.price_per_hour || 0), 0);
+  const filteredRows = rows.filter((row) => {
+    const term = searchText.trim().toLowerCase();
+    const rowText = [
+      previewValue(row),
+      row.description,
+      row.address,
+      row.phone,
+      row.slug,
+      row.status
+    ].filter(Boolean).join(" ").toLowerCase();
+    const rowDate = String(row.created_at || row.updated_at || "").slice(0, 10);
+    const statusMatched =
+      statusFilter === "all" ||
+      (statusFilter === "active" && row.active !== false && !["cancelled", "pending_payment"].includes(row.status)) ||
+      (statusFilter === "inactive" && row.active === false) ||
+      row.status === statusFilter;
+
+    return (!term || rowText.includes(term)) && statusMatched && (!dateFilter || rowDate === dateFilter);
+  });
+  const visibleListRows = filteredRows.slice(0, Number(perPage));
+  const resourceIcons = {
+    amenities: Sofa,
+    news: Film,
+    images: ImagePlus,
+    galleries: ImagePlus,
+    branches: Building2,
+    rooms: Hotel,
+    "room-images": ImagePlus,
+    bookings: CalendarCheck,
+    homestays: MapPin,
+    commits: CheckCircle2,
+    contacts: Phone,
+    pages: Copy,
+    systems: ShieldCheck,
+    admins: Users,
+    roles: ShieldCheck,
+    permissions: ShieldCheck
+  };
 
   function blankForm(resource = activeResource) {
     return resource.fields.reduce((result, field) => {
       if (booleanFields.has(field)) result[field] = true;
+      else if (field === "amenity_ids") result[field] = [];
+      else if (field === "room_image_urls") result[field] = [];
       else result[field] = "";
       return result;
     }, {});
@@ -384,7 +506,8 @@ function AdminPage() {
 
   async function adminRequest(path, options = {}) {
     const isFormData = options.body instanceof FormData;
-    const response = await fetch(`${API_BASE_URL}${path}`, {
+    const adminPath = path === "/upload" ? path : `/admin${path}`;
+    const response = await fetch(`${API_BASE_URL}${adminPath}`, {
       ...options,
       headers: {
         ...(isFormData ? {} : { "Content-Type": "application/json" }),
@@ -394,7 +517,7 @@ function AdminPage() {
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(payload.message || "Thao tac khong thanh cong.");
+      throw new Error(payload.message || "Thao tác không thành công.");
     }
     return payload;
   }
@@ -414,7 +537,7 @@ function AdminPage() {
       });
       localStorage.setItem("homestay_admin_token", payload.token);
       setToken(payload.token);
-      setNotice({ type: "success", text: "Dang nhap admin thanh cong." });
+      setNotice({ type: "success", text: "Đăng nhập admin thành công." });
     } catch (error) {
       setNotice({ type: "error", text: error.message });
     } finally {
@@ -445,17 +568,19 @@ function AdminPage() {
     }
   }
 
-  function chooseResource(resource) {
+  function chooseResource(resource, view = "list") {
     setActiveKey(resource.key);
     setSelectedRow(null);
     setForm(blankForm(resource));
     setSearchText("");
+    setAdminView(view);
   }
 
   function startCreate() {
     setSelectedRow(null);
     setForm(blankForm());
     setNotice(null);
+    setAdminView("create");
   }
 
   function startEdit(row) {
@@ -463,14 +588,26 @@ function AdminPage() {
     setForm(
       activeResource.fields.reduce((result, field) => {
         result[field] = field === "password" ? "" : row[field] ?? (booleanFields.has(field) ? false : "");
+        if (field === "amenity_ids") result[field] = Array.isArray(row[field]) ? row[field].map(String) : [];
+        if (field === "room_image_urls") result[field] = Array.isArray(row[field]) ? row[field] : [];
         return result;
       }, {})
     );
     setNotice(null);
+    setAdminView("create");
   }
 
   function updateAdminField(field, value) {
     setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  async function loadAmenityOptions() {
+    try {
+      const payload = await adminRequest("/amenities/all");
+      setAmenityOptions(payload.data || []);
+    } catch (error) {
+      setAmenityOptions([]);
+    }
   }
 
   function normalizeAdminPayload() {
@@ -495,10 +632,11 @@ function AdminPage() {
         method: selectedRow ? "PUT" : "POST",
         body: JSON.stringify(payload)
       });
-      setNotice({ type: "success", text: selectedRow ? "Da cap nhat noi dung." : "Da tao noi dung moi." });
+      setNotice({ type: "success", text: selectedRow ? "Đã cập nhật nội dung." : "Đã tạo nội dung mới." });
       setSelectedRow(null);
       setForm(blankForm());
       await loadAdminRows();
+      setAdminView("list");
     } catch (error) {
       setNotice({ type: "error", text: error.message });
     } finally {
@@ -507,13 +645,13 @@ function AdminPage() {
   }
 
   async function deleteRow(row) {
-    const ok = window.confirm(`Xoa #${row.id}?`);
+    const ok = window.confirm(`Xóa #${row.id}?`);
     if (!ok) return;
     setSaving(true);
 
     try {
       await adminRequest(`/${activeResource.key}/${row.id}`, { method: "DELETE" });
-      setNotice({ type: "success", text: "Da xoa noi dung." });
+      setNotice({ type: "success", text: "Đã xóa nội dung." });
       await loadAdminRows();
       if (selectedRow?.id === row.id) startCreate();
     } catch (error) {
@@ -536,7 +674,36 @@ function AdminPage() {
         body
       });
       updateAdminField(field, payload.data?.url || "");
-      setNotice({ type: "success", text: "Upload anh thanh cong." });
+      setNotice({ type: "success", text: "Upload ảnh thành công." });
+    } catch (error) {
+      setNotice({ type: "error", text: error.message });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function uploadRoomImages(field, files) {
+    const fileList = Array.from(files || []);
+    if (!fileList.length) return;
+    setSaving(true);
+    setNotice(null);
+
+    try {
+      const uploadedUrls = [];
+      for (const file of fileList) {
+        const body = new FormData();
+        body.append("file", file);
+        const payload = await adminRequest("/upload", {
+          method: "POST",
+          body
+        });
+        if (payload.data?.url) uploadedUrls.push(payload.data.url);
+      }
+      setForm((current) => ({
+        ...current,
+        [field]: [...(current[field] || []), ...uploadedUrls]
+      }));
+      setNotice({ type: "success", text: "Upload ảnh phòng thành công." });
     } catch (error) {
       setNotice({ type: "error", text: error.message });
     } finally {
@@ -548,13 +715,29 @@ function AdminPage() {
     return row.name || row.title || row.full_name || row.key || row.slug || row.email || `#${row.id}`;
   }
 
+  function statusText(row) {
+    if (row.active === false) return "Ẩn";
+    if (row.status === "cancelled") return "Đã hủy";
+    if (row.status === "pending_payment") return "Chờ thanh toán";
+    if (row.status === "confirmed") return "Đã xác nhận";
+    return row.status || "Đang hiển thị";
+  }
+
+  function fieldLabel(field) {
+    return fieldLabels[field] || field;
+  }
+
   useEffect(() => {
     setForm(blankForm());
   }, []);
 
   useEffect(() => {
-    if (token) loadAdminRows(activeResource);
-  }, [token, activeKey]);
+    if (token && adminView !== "dashboard") loadAdminRows(activeResource);
+  }, [token, activeKey, adminView]);
+
+  useEffect(() => {
+    if (token && activeResource.key === "rooms") loadAmenityOptions();
+  }, [token, activeResource.key]);
 
   if (!token) {
     return (
@@ -563,22 +746,22 @@ function AdminPage() {
           <div className="admin-login-brand">
             <span><ShieldCheck size={24} /></span>
             <div>
-              <h1>Homestay CMS</h1>
-              <p>Quan tri content, phong va booking data.</p>
+              <h1>ftft CMS</h1>
+              <p>Quản trị nội dung, phòng và booking.</p>
             </div>
           </div>
           {notice && <div className={`notice ${notice.type}`}>{notice.text}</div>}
           <label>
-            Tai khoan
+            Tài khoản
             <input value={loginForm.username} onChange={(event) => setLoginForm((current) => ({ ...current, username: event.target.value }))} />
           </label>
           <label>
-            Mat khau
+            Mật khẩu
             <input type="password" value={loginForm.password} onChange={(event) => setLoginForm((current) => ({ ...current, password: event.target.value }))} />
           </label>
           <button className="primary-btn full" type="submit" disabled={saving}>
             {saving ? <Loader2 className="spin" size={18} /> : <ShieldCheck size={18} />}
-            Dang nhap
+            Đăng nhập
           </button>
         </form>
       </main>
@@ -586,167 +769,466 @@ function AdminPage() {
   }
 
   return (
-    <main className="admin-shell">
+    <main className="admin-shell admin-template">
       <aside className="admin-sidebar">
         <div className="admin-brand">
-          <LayoutDashboard size={22} />
-          <div>
-            <strong>Homestay CMS</strong>
-            <span>Content manager</span>
-          </div>
+          <span className="admin-logo-mark">ft</span>
+          <strong>ftft</strong>
+          <button type="button" aria-label="Thu gọn menu">
+            <ChevronLeft size={18} />
+          </button>
         </div>
+        <button
+          className={adminView === "dashboard" ? "admin-dashboard-link active" : "admin-dashboard-link"}
+          type="button"
+          onClick={() => {
+            setAdminView("dashboard");
+            setNotice(null);
+          }}
+        >
+          <LayoutDashboard size={18} />
+          Dashboards
+        </button>
         <nav className="admin-resource-nav">
-          {adminResources.map((resource) => (
-            <button
-              key={resource.key}
-              type="button"
-              className={resource.key === activeKey ? "active" : ""}
-              onClick={() => chooseResource(resource)}
-            >
-              {resource.label}
-            </button>
+          {Object.entries(groupedResources).map(([group, resources]) => (
+            <div className="admin-nav-group" key={group}>
+              <p>{group}</p>
+              {resources.map((resource) => (
+                <div className={resource.key === activeKey && adminView !== "dashboard" ? "admin-menu-node open" : "admin-menu-node"} key={resource.key}>
+                  <button
+                    type="button"
+                    className={resource.key === activeKey && adminView !== "dashboard" ? "active" : ""}
+                    onClick={() => chooseResource(resource, "list")}
+                  >
+                    <span>
+                      {(() => {
+                        const Icon = resourceIcons[resource.key] || Copy;
+                        return <Icon size={20} />;
+                      })()}
+                      {resource.label}
+                    </span>
+                    <ChevronRight size={16} />
+                  </button>
+                  {resource.key === activeKey && adminView !== "dashboard" && (
+                    <div className="admin-menu-sub">
+                      <button
+                        type="button"
+                        className={adminView === "create" && !selectedRow ? "active" : ""}
+                        onClick={() => chooseResource(resource, "create")}
+                      >
+                        <span><i /> Tạo {resource.label.toLowerCase()}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={adminView === "list" || selectedRow ? "active" : ""}
+                        onClick={() => chooseResource(resource, "list")}
+                      >
+                        <span><i /> DS {resource.label.toLowerCase()}</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           ))}
         </nav>
         <button className="admin-logout" type="button" onClick={logout}>
           <LogOut size={16} />
-          Dang xuat
+          Đăng xuất
         </button>
       </aside>
 
       <section className="admin-main">
-        <header className="admin-toolbar">
-          <div>
-            <h1>{activeResource.label}</h1>
-            <p>{rows.length} ban ghi trong CMS</p>
-          </div>
-          <div className="admin-actions">
-            <div className="admin-search">
-              <Search size={17} />
-              <input
-                value={searchText}
-                placeholder="Tim noi dung..."
-                onChange={(event) => setSearchText(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") loadAdminRows();
-                }}
-              />
-            </div>
-            <button className="icon-btn admin-icon-btn" type="button" onClick={() => loadAdminRows()} aria-label="Tai lai">
-              <RefreshCw size={18} />
-            </button>
-            <button className="primary-btn" type="button" onClick={startCreate}>
-              <Plus size={17} />
-              Tao moi
-            </button>
-          </div>
-        </header>
-
         {notice && <div className={`notice ${notice.type}`}>{notice.text}</div>}
 
-        <div className="admin-workspace">
-          <section className="admin-table-panel">
-            {loading ? (
-              <div className="admin-loading"><Loader2 className="spin" size={20} /> Dang tai du lieu...</div>
-            ) : (
-              <div className="admin-table-wrap">
-                <table className="admin-table">
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Noi dung</th>
-                      <th>Trang thai</th>
-                      <th>Cap nhat</th>
-                      <th aria-label="Tac vu" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((row) => (
-                      <tr key={row.id} className={selectedRow?.id === row.id ? "selected" : ""}>
-                        <td>#{row.id}</td>
-                        <td>
-                          <button type="button" className="admin-row-title" onClick={() => startEdit(row)}>
-                            {previewValue(row)}
-                          </button>
-                          <span>{row.description || row.address || row.phone || row.slug || ""}</span>
-                        </td>
-                        <td>
-                          <i className={row.active === false || row.status === "cancelled" ? "status-dot off" : "status-dot"} />
-                          {row.active === false ? "An" : row.status || "Active"}
-                        </td>
-                        <td>{row.updated_at ? new Date(row.updated_at).toLocaleDateString("vi-VN") : "-"}</td>
-                        <td>
-                          <div className="admin-row-actions">
-                            <button type="button" onClick={() => startEdit(row)} aria-label="Sua"><Edit3 size={16} /></button>
-                            <button type="button" onClick={() => deleteRow(row)} aria-label="Xoa"><Trash2 size={16} /></button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                    {!rows.length && (
-                      <tr>
-                        <td colSpan="5" className="admin-empty">Chua co du lieu.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+        {adminView === "dashboard" ? (
+          <section className="admin-overview-grid">
+            <div className="admin-analytics-card">
+              <div className="admin-analytics-copy">
+                <h2>Website Analytics</h2>
+                <p>Total 28.5% Conversion Rate</p>
+                <h4>Traffic</h4>
+                <div className="admin-analytics-stats">
+                  <span><strong>{adminResources.length}</strong> Module</span>
+                  <span><strong>{rows.length}</strong> Page Views</span>
+                  <span><strong>{visibleRows}</strong> Leads</span>
+                  <span><strong>{inactiveRows}</strong> Conversions</span>
+                </div>
               </div>
-            )}
+              <img className="admin-analytics-illustration" src="/admin-template/card-website-analytics-1.png" alt="" />
+            </div>
+            <div className="admin-metric-card admin-sales-card">
+              <p>Average Daily Sales</p>
+              <span>Total Sales This Month</span>
+              <h3>{overviewTotal ? compactMoney(overviewTotal) : rows.length}</h3>
+              <div className="admin-mini-bars" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+                <i />
+                <i />
+                <i />
+              </div>
+            </div>
+            <div className="admin-metric-card admin-overview-card">
+              <div className="admin-card-heading">
+                <p>Sales Overview</p>
+                <b>+18.2%</b>
+              </div>
+              <h3>{activeResource.label}</h3>
+              <div className="admin-sales-split">
+                <span><CreditCard size={18} /> Order <strong>62.2%</strong></span>
+                <span>Visits <strong>25.5%</strong></span>
+              </div>
+              <div className="admin-progress"><i /><b /></div>
+            </div>
           </section>
-
-          <form className="admin-editor" onSubmit={saveRow}>
-            <div className="admin-editor-head">
+        ) : (
+          <>
+            <div className="admin-page-heading">
+              <h1>{(adminView === "create" ? (selectedRow ? "Sửa " : "Tạo mới ") : "DS ") + activeResource.label.toLowerCase()}</h1>
               <div>
-                <h2>{selectedRow ? `Sua #${selectedRow.id}` : "Tao moi"}</h2>
-                <p>{activeResource.label}</p>
+                {adminView === "create" && (
+                  <button className="ghost-btn admin-cancel-btn" type="button" onClick={() => setAdminView("list")}>
+                    Hủy
+                  </button>
+                )}
+                <button className="primary-btn" type="button" disabled={saving} onClick={adminView === "create" ? () => document.getElementById("admin-editor-form")?.requestSubmit() : startCreate}>
+                  {saving && adminView === "create" ? <Loader2 className="spin" size={17} /> : adminView === "create" ? <Save size={17} /> : <Plus size={17} />}
+                  {adminView === "create" ? "Lưu" : "Tạo mới"}
+                </button>
               </div>
-              <button className="ghost-btn" type="button" onClick={startCreate}>Reset</button>
             </div>
 
-            <div className="admin-field-grid">
-              {activeResource.fields.map((field) => (
-                <label key={field} className={textareaFields.has(field) ? "wide" : ""}>
-                  <span>{field}</span>
-                  {booleanFields.has(field) ? (
+            {adminView === "list" ? (
+              <section className="admin-table-panel admin-list-page">
+                <div className="admin-filter-panel">
+                  <h2>Tìm kiếm</h2>
+                  <div className="admin-filter-grid">
                     <input
-                      type="checkbox"
-                      checked={Boolean(form[field])}
-                      onChange={(event) => updateAdminField(field, event.target.checked)}
+                      value={searchText}
+                      placeholder={`Tìm kiếm ${activeResource.label.toLowerCase()}`}
+                      onChange={(event) => setSearchText(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") loadAdminRows();
+                      }}
                     />
-                  ) : textareaFields.has(field) ? (
-                    <textarea
-                      value={form[field] || ""}
-                      onChange={(event) => updateAdminField(field, event.target.value)}
-                    />
-                  ) : (
-                    <input
-                      type={field === "password" ? "password" : numberFields.has(field) ? "number" : "text"}
-                      value={form[field] || ""}
-                      placeholder={field === "password" && selectedRow ? "De trong neu khong doi" : ""}
-                      onChange={(event) => updateAdminField(field, event.target.value)}
-                    />
-                  )}
-                  {imageFields.has(field) && (
-                    <div className="admin-upload-row">
-                      <input type="file" accept="image/*" onChange={(event) => uploadAsset(field, event.target.files?.[0])} />
-                      {form[field] && <img src={assetUrl(form[field])} alt="" />}
-                    </div>
-                  )}
-                </label>
-              ))}
-            </div>
+                    <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                      <option value="all">Tất cả trạng thái</option>
+                      <option value="active">Kích hoạt</option>
+                      <option value="inactive">Tạm ẩn</option>
+                      <option value="pending_payment">Chờ thanh toán</option>
+                      <option value="confirmed">Đã xác nhận</option>
+                      <option value="cancelled">Đã hủy</option>
+                    </select>
+                    <input type="date" value={dateFilter} onChange={(event) => setDateFilter(event.target.value)} />
+                    <button className="admin-filter-btn" type="button" onClick={() => loadAdminRows()}>
+                      <Search size={18} />
+                      Lọc
+                    </button>
+                  </div>
+                </div>
+                <div className="admin-list-tools">
+                  <select value={perPage} onChange={(event) => setPerPage(event.target.value)} aria-label="Số dòng hiển thị">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                  </select>
+                  <span>{filteredRows.length} kết quả</span>
+                </div>
+                {loading ? (
+                  <div className="admin-loading"><Loader2 className="spin" size={20} /> Đang tải dữ liệu...</div>
+                ) : (
+                  <div className="admin-table-wrap">
+                    <table className="admin-table">
+                      <thead>
+                        <tr>
+                          <th>ID</th>
+                          <th>Nội dung</th>
+                          <th>Trạng thái</th>
+                          <th>Cập nhật</th>
+                          <th aria-label="Tác vụ" />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {visibleListRows.map((row) => (
+                          <tr key={row.id} className={selectedRow?.id === row.id ? "selected" : ""}>
+                            <td>#{row.id}</td>
+                            <td>
+                              <button type="button" className="admin-row-title" onClick={() => startEdit(row)}>
+                                {previewValue(row)}
+                              </button>
+                              <span>{row.description || row.address || row.phone || row.slug || ""}</span>
+                            </td>
+                            <td>
+                              <i className={row.active === false || row.status === "cancelled" ? "status-dot off" : "status-dot"} />
+                              {statusText(row)}
+                            </td>
+                            <td>{row.updated_at ? new Date(row.updated_at).toLocaleDateString("vi-VN") : "-"}</td>
+                            <td>
+                              <div className="admin-row-actions">
+                                <button type="button" onClick={() => startEdit(row)} aria-label="Sửa"><Edit3 size={16} /></button>
+                                <button type="button" onClick={() => deleteRow(row)} aria-label="Xóa"><Trash2 size={16} /></button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                        {!visibleListRows.length && (
+                          <tr>
+                            <td colSpan="5" className="admin-empty">Chưa có dữ liệu.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+            ) : (
+              <form id="admin-editor-form" className="admin-editor admin-editor-page" onSubmit={saveRow}>
+                <div className="admin-editor-head">
+                  <div>
+                    <h2>{selectedRow ? "Sửa #" + selectedRow.id : "Tạo " + activeResource.label.toLowerCase()}</h2>
+                    <p>{activeResource.label}</p>
+                  </div>
+                  <button className="ghost-btn" type="button" onClick={startCreate}>Làm mới</button>
+                </div>
 
-            <button className="primary-btn full admin-save-btn" type="submit" disabled={saving}>
-              {saving ? <Loader2 className="spin" size={18} /> : <Save size={18} />}
-              {selectedRow ? "Luu thay doi" : "Tao noi dung"}
-            </button>
-          </form>
-        </div>
+                <div className="admin-field-grid">
+                  {activeResource.fields.map((field) => (
+                    <label key={field} className={textareaFields.has(field) || field === "room_image_urls" ? "wide" : ""}>
+                      <span>{fieldLabel(field)}</span>
+                      {booleanFields.has(field) ? (
+                        <input
+                          type="checkbox"
+                          checked={Boolean(form[field])}
+                          onChange={(event) => updateAdminField(field, event.target.checked)}
+                        />
+                      ) : field === "amenity_ids" ? (
+                        <AdminAmenityMultiSelect
+                          options={amenityOptions}
+                          value={form[field] || []}
+                          onChange={(value) => updateAdminField(field, value)}
+                        />
+                      ) : field === "room_image_urls" ? (
+                        <AdminRoomImagePicker
+                          value={form[field] || []}
+                          saving={saving}
+                          onUpload={(files) => uploadRoomImages(field, files)}
+                          onRemove={(imageUrl) => updateAdminField(field, (form[field] || []).filter((item) => item !== imageUrl))}
+                        />
+                      ) : textareaFields.has(field) ? (
+                        <textarea
+                          value={form[field] || ""}
+                          onChange={(event) => updateAdminField(field, event.target.value)}
+                        />
+                      ) : (
+                        <input
+                          type={field === "password" ? "password" : numberFields.has(field) ? "number" : "text"}
+                          value={form[field] || ""}
+                          placeholder={field === "password" && selectedRow ? "Để trống nếu không đổi" : ""}
+                          onChange={(event) => updateAdminField(field, event.target.value)}
+                        />
+                      )}
+                      {imageFields.has(field) && (
+                        <div className="admin-upload-row">
+                          <input type="file" accept="image/*" onChange={(event) => uploadAsset(field, event.target.files?.[0])} />
+                          {form[field] && <img src={assetUrl(form[field])} alt="" />}
+                        </div>
+                      )}
+                    </label>
+                  ))}
+                </div>
+              </form>
+            )}
+          </>
+        )}
       </section>
     </main>
   );
 }
 
-function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack, onBook }) {
+function AdminAmenityMultiSelect({ options, value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const selectedIds = (value || []).map(String);
+  const selectedOptions = options.filter((option) => selectedIds.includes(String(option.id)));
+  const filteredOptions = options.filter((option) =>
+    String(option.name || "").toLowerCase().includes(query.trim().toLowerCase())
+  );
+
+  function toggleOption(id) {
+    const idText = String(id);
+    const next = selectedIds.includes(idText)
+      ? selectedIds.filter((item) => item !== idText)
+      : [...selectedIds, idText];
+    onChange(next.map(Number));
+  }
+
+  function removeOption(id) {
+    onChange(selectedIds.filter((item) => item !== String(id)).map(Number));
+  }
+
+  return (
+    <div className="admin-shadcn-multiselect">
+      <button
+        className={open ? "admin-ms-trigger open" : "admin-ms-trigger"}
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span>{selectedOptions.length ? `${selectedOptions.length} tiện nghi đã chọn` : "Chọn tiện nghi"}</span>
+        <ChevronRight size={16} />
+      </button>
+
+      {selectedOptions.length ? (
+        <div className="admin-ms-badges">
+          {selectedOptions.map((option) => (
+            <span key={option.id}>
+              {option.name}
+              <button type="button" onClick={() => removeOption(option.id)} aria-label={`Bỏ ${option.name}`}>
+                <X size={12} />
+              </button>
+            </span>
+          ))}
+        </div>
+      ) : null}
+
+      {open && (
+        <div className="admin-ms-popover">
+          <div className="admin-ms-search">
+            <Search size={15} />
+            <input
+              value={query}
+              placeholder="Tìm tiện nghi..."
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </div>
+          <div className="admin-ms-list">
+            {filteredOptions.map((option) => {
+              const checked = selectedIds.includes(String(option.id));
+              return (
+                <button
+                  key={option.id}
+                  className={checked ? "selected" : ""}
+                  type="button"
+                  onClick={() => toggleOption(option.id)}
+                >
+                  <span className="admin-ms-check">{checked && <Check size={13} />}</span>
+                  <span>{option.name}</span>
+                </button>
+              );
+            })}
+            {!filteredOptions.length && <p>Không tìm thấy tiện nghi.</p>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminRoomImagePicker({ value, saving, onUpload, onRemove }) {
+  const images = Array.isArray(value) ? value : [];
+
+  return (
+    <div className="admin-room-image-picker">
+      <label className="admin-room-image-drop">
+        <ImagePlus size={20} />
+        <span>{saving ? "Đang upload..." : "Chọn ảnh phòng"}</span>
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          disabled={saving}
+          onChange={(event) => {
+            onUpload(event.target.files);
+            event.target.value = "";
+          }}
+        />
+      </label>
+      {images.length ? (
+        <div className="admin-room-image-grid">
+          {images.map((imageUrl) => (
+            <figure key={imageUrl}>
+              <img src={assetUrl(imageUrl)} alt="" />
+              <button type="button" onClick={() => onRemove(imageUrl)} aria-label="Xóa ảnh">
+                <X size={14} />
+              </button>
+            </figure>
+          ))}
+        </div>
+      ) : (
+        <p>Chưa có ảnh phòng.</p>
+      )}
+    </div>
+  );
+}
+
+function RoomEmblaGallery({ images, title }) {
+  const safeImages = images?.length ? images : [];
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    align: "center",
+    loop: safeImages.length > 1
+  });
+  const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
+  const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
+  const scrollTo = useCallback((index) => emblaApi?.scrollTo(index), [emblaApi]);
+
+  useEffect(() => {
+    if (!emblaApi) return undefined;
+    const onSelect = () => setSelectedIndex(emblaApi.selectedScrollSnap());
+    emblaApi.on("select", onSelect);
+    emblaApi.on("reInit", onSelect);
+    onSelect();
+    return () => {
+      emblaApi.off("select", onSelect);
+      emblaApi.off("reInit", onSelect);
+    };
+  }, [emblaApi]);
+
+  useEffect(() => {
+    setSelectedIndex(0);
+    emblaApi?.scrollTo(0, true);
+    emblaApi?.reInit();
+  }, [safeImages.join("|"), emblaApi]);
+
+  return (
+    <div className="booking-gallery embla-booking-gallery">
+      <div className="embla-gallery-viewport" ref={emblaRef}>
+        <div className="embla-gallery-container">
+          {safeImages.map((image, index) => (
+            <div className="booking-gallery-slide" key={`${image}-${index}`}>
+              <img src={image} alt={index === 0 ? title : `${title} ${index + 1}`} />
+            </div>
+          ))}
+        </div>
+      </div>
+      {safeImages.length > 1 && (
+        <>
+          <button className="embla-gallery-arrow prev" type="button" onClick={scrollPrev} aria-label="Ảnh trước">
+            <ChevronLeft size={22} />
+          </button>
+          <button className="embla-gallery-arrow next" type="button" onClick={scrollNext} aria-label="Ảnh sau">
+            <ChevronRight size={22} />
+          </button>
+          <div className="embla-gallery-dots">
+            {safeImages.map((image, index) => (
+              <button
+                key={`${image}-dot-${index}`}
+                className={index === selectedIndex ? "active" : ""}
+                type="button"
+                onClick={() => scrollTo(index)}
+                aria-label={`Xem ảnh ${index + 1}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack }) {
   const [selectedSlots, setSelectedSlots] = useState([]);
   const [availabilityRows, setAvailabilityRows] = useState([]);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
@@ -767,7 +1249,7 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack, o
         "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=900&q=85",
         "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=900&q=85"
       ];
-  const bookingDays = upcomingBookingDays(8);
+  const bookingDays = upcomingBookingDays(8, search.booking_date);
   const firstBookingDate = bookingDays[0]?.iso;
   const detailSlots = room?.time_slots?.length
     ? room.time_slots.map((slot) => ({
@@ -915,7 +1397,19 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack, o
     setPaymentBooking(null);
     setAvailabilityRows([]);
     if (room?.id) loadAvailability();
-  }, [room?.id]);
+  }, [room?.id, search.booking_date]);
+
+  useEffect(() => {
+    if (!room?.id || availabilityLoading || selectedSlots.length) return;
+    const searchedSlot = detailSlots.find((slot) => slot.code === search.slot_id);
+    if (!searchedSlot || !firstBookingDate) return;
+
+    const key = `${firstBookingDate}|${searchedSlot.id}`;
+    const availability = slotStatusMap.get(key);
+    if (!availability || availability.status === "available") {
+      setSelectedSlots([key]);
+    }
+  }, [room?.id, availabilityLoading, firstBookingDate, search.slot_id, detailSlots, slotStatusMap, selectedSlots.length]);
 
   useEffect(() => {
     const bookingId = paymentBooking?.id;
@@ -977,14 +1471,7 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack, o
         <div className="detail-left-column">
           <h1 className="booking-detail-title">Libra - 22</h1>
 
-          <div className="booking-gallery">
-            <button className="gallery-arrow gallery-arrow-left" type="button" aria-label="Anh truoc"><ChevronLeft size={22} /></button>
-            <img className="booking-gallery-main" src={gallery[0]} alt={room.name} />
-            <div className="gallery-peek gallery-peek-left"><img src={gallery[1] || gallery[0]} alt="" /></div>
-            <div className="gallery-peek gallery-peek-right"><img src={gallery[2] || gallery[0]} alt="" /></div>
-            <button className="gallery-arrow gallery-arrow-right" type="button" aria-label="Anh sau"><ChevronRight size={22} /></button>
-            <div className="gallery-dots" aria-hidden="true"><span /><span /><span /></div>
-          </div>
+          <RoomEmblaGallery images={gallery} title={room.name} />
 
           <div className="slot-booking-section">
             <div className="price-board">
@@ -1005,7 +1492,11 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack, o
                   <span><i className="legend-box selected" />Dang chon</span>
                 </div>
               </div>
-              <button className="primary-btn compact-slot-btn" type="button" onClick={() => onBook(room)}>
+              <button
+                className="primary-btn compact-slot-btn"
+                type="button"
+                onClick={() => document.querySelector(".detail-booking-panel")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              >
                 {availabilityLoading ? <Loader2 className="spin" size={16} /> : null}
                 Dat phong
               </button>
@@ -1130,7 +1621,7 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack, o
 
           <textarea
             className="booking-textarea"
-            placeholder="Ghi chu cho The Anh The Home"
+            placeholder="Ghi chu cho ftft"
             value={detailForm.note}
             onChange={(event) => updateDetailForm("note", event.target.value)}
           />
@@ -1191,7 +1682,7 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack, o
             </div>
           )}
 
-          <p className="policy-copy">Khi bam Dat phong dong nghia voi viec ban da doc va dong y voi cac <b>Noi quy</b> & <b>Chinh sach</b> cua The Anh The Home</p>
+          <p className="policy-copy">Khi bam Dat phong dong nghia voi viec ban da doc va dong y voi cac <b>Noi quy</b> & <b>Chinh sach</b> cua ftft</p>
 
           <div className="booking-warning">
             <b>*Chu y:</b><br />

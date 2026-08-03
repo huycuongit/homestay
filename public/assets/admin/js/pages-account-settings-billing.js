@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', function (e) {
           companyName: {
             validators: {
               notEmpty: {
-                message: 'Please enter company name'
+                message: 'Please enter ftft name'
               }
             }
           },

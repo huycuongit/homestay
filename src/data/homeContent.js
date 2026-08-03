@@ -31,8 +31,8 @@ export const featureList = [
 ];
 
 export const bookingSlots = [
-  { id: "morning", label: "8:00 - 11:00", type: "hour", price: 200000 },
-  { id: "noon", label: "11:30 - 14:30", type: "hour", price: 200000 },
-  { id: "afternoon", label: "15:00 - 18:00", type: "hour", price: 200000 },
-  { id: "overnight", label: "18:30 - 07:20", subLabel: "(Qua dem)", type: "night", price: 370000 }
+  { id: "morning", label: "8:00 - 11:00", type: "hour", start: "08:00", end: "11:00", crossesMidnight: false, price: 200000 },
+  { id: "noon", label: "11:30 - 14:30", type: "hour", start: "11:30", end: "14:30", crossesMidnight: false, price: 200000 },
+  { id: "afternoon", label: "15:00 - 18:00", type: "hour", start: "15:00", end: "18:00", crossesMidnight: false, price: 200000 },
+  { id: "overnight", label: "18:30 - 07:20", subLabel: "(Qua dem)", type: "night", start: "18:30", end: "07:20", crossesMidnight: true, price: 370000 }
 ];
