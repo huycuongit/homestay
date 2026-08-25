@@ -14,7 +14,7 @@ export async function apiFetch(path, options = {}) {
     const details = payload.errors
       ? Object.values(payload.errors).filter(Boolean).join(". ")
       : payload.message;
-    throw new Error(details || "Khong ket noi duoc may chu.");
+    throw new Error(details || "Không kết nối được máy chủ.");
   }
 
   return payload;

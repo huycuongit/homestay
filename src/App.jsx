@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { io } from "socket.io-client";
 import useEmblaCarousel from "embla-carousel-react";
+import toast, { Toaster } from "react-hot-toast";
 import {
   ArrowLeft,
   ArrowUp,
@@ -46,6 +47,7 @@ import AuthModal from "./components/auth/AuthModal";
 import FloatingContact from "./components/layout/FloatingContact";
 import Footer from "./components/layout/Footer";
 import Header from "./components/layout/Header";
+import BrandLogo from "./components/layout/BrandLogo";
 import HeroSection from "./components/home/HeroSection";
 import IntroSection from "./components/home/IntroSection";
 import RoomsSection from "./components/home/RoomsSection";
@@ -56,9 +58,44 @@ import { apiFetch } from "./services/api";
 import { buildSlotDateRange, defaultBookingDate, normalizeDateKey, toApiDate, upcomingBookingDays } from "./utils/date";
 import { assetUrl, compactMoney, money } from "./utils/format";
 
-function getRoomIdFromPath() {
-  const match = window.location.pathname.match(/^\/rooms\/(\d+)/);
+function getRoomKeyFromPath() {
+  const match = window.location.pathname.match(/^\/rooms\/([^/?#]+)/);
   return match ? match[1] : null;
+}
+
+function createDefaultSearch(options = bookingSlots) {
+  const firstSlot = options[0] || {};
+  return {
+    booking_date: defaultBookingDate(),
+    slot_id: firstSlot.id || "",
+    check_in: "",
+    check_out: "",
+    booking_type: firstSlot.type || "",
+    guests: 2
+  };
+}
+
+function createEmptySearch() {
+  return {
+    booking_date: "",
+    slot_id: "",
+    check_in: "",
+    check_out: "",
+    booking_type: "",
+    guests: 2
+  };
+}
+
+function toAdminSlug(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "d")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 function readStoredUser() {
@@ -69,26 +106,35 @@ function readStoredUser() {
   }
 }
 
-function getSearchSlotRange(search) {
-  const slot = bookingSlots.find((item) => item.id === search.slot_id && item.type === search.booking_type);
+function normalizeBookingOptions(options = []) {
+  return options.map((option) => ({
+    id: option.code,
+    label: option.label || `${String(option.start_time || option.start || "").slice(0, 5)} - ${String(option.end_time || option.end || "").slice(0, 5)}`,
+    type: option.rate_code || option.type,
+    rateName: option.rate_name || option.rateName || option.rate_code,
+    start: String(option.start_time || option.start || "").slice(0, 5),
+    end: String(option.end_time || option.end || "").slice(0, 5),
+    crossesMidnight: Boolean(option.crosses_midnight ?? option.crossesMidnight),
+    price: option.price_amount ?? option.price,
+    position: option.position || 0
+  })).filter((option) => option.id && option.type && option.start && option.end);
+}
+
+function getSearchSlotRange(search, options = bookingSlots) {
+  const slot = options.find((item) => item.id === search.slot_id && item.type === search.booking_type);
   return buildSlotDateRange(search.booking_date, slot);
 }
 
 function App() {
-  const [currentRoomId, setCurrentRoomId] = useState(getRoomIdFromPath());
+  const [currentRoomId, setCurrentRoomId] = useState(getRoomKeyFromPath());
   const [isAdminRoute, setIsAdminRoute] = useState(window.location.pathname.startsWith("/admin"));
   const [detailRoom, setDetailRoom] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [search, setSearch] = useState({
-    booking_date: defaultBookingDate(),
-    slot_id: "morning",
-    check_in: "",
-    check_out: "",
-    booking_type: "hour",
-    guests: 2
-  });
+  const [search, setSearch] = useState(() => createEmptySearch());
   const [rooms, setRooms] = useState([]);
+  const [homeRooms, setHomeRooms] = useState([]);
   const [branches, setBranches] = useState([]);
+  const [bookingOptions, setBookingOptions] = useState(bookingSlots);
   const [selectedBranchId, setSelectedBranchId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState(null);
@@ -113,10 +159,8 @@ function App() {
     return search.booking_type === "hour" ? selectedRoom.price_per_hour : selectedRoom.price_per_night;
   }, [search.booking_type, selectedRoom]);
 
-  async function loadRooms(event) {
-    event?.preventDefault();
-    if (!selectedBranchId) {
-      setRooms([]);
+  async function fetchRooms(nextSearch = search, branchId = selectedBranchId) {
+    if (!branchId) {
       setNotice({ type: "muted", text: "Vui lòng chọn chi nhánh trước khi tìm phòng." });
       return;
     }
@@ -124,18 +168,22 @@ function App() {
     setNotice(null);
 
     try {
-      const slotRange = getSearchSlotRange(search);
+      if (!nextSearch.booking_type || !nextSearch.booking_date || !nextSearch.slot_id || !nextSearch.guests) {
+        setNotice({ type: "error", text: "Vui lòng chọn đầy đủ loại đặt, ngày, khung giờ và số khách." });
+        return;
+      }
+      const slotRange = getSearchSlotRange(nextSearch, bookingOptions);
       if (!slotRange) {
-        setRooms([]);
         setNotice({ type: "error", text: "Vui lòng chọn ngày và khung giờ hợp lệ." });
         return;
       }
       const params = new URLSearchParams({
         check_in: toApiDate(slotRange.checkIn),
         check_out: toApiDate(slotRange.checkOut),
-        guests: String(search.guests)
+        slot_code: nextSearch.slot_id,
+        guests: String(nextSearch.guests)
       });
-      if (selectedBranchId) params.set("branch_id", String(selectedBranchId));
+      params.set("branch_id", String(branchId));
       const payload = await apiFetch(`/rooms/available?${params.toString()}`);
       setRooms(payload.data || []);
       if (!payload.data?.length) {
@@ -149,11 +197,26 @@ function App() {
     }
   }
 
+  async function loadRooms(event) {
+    event?.preventDefault();
+    return fetchRooms();
+  }
+
+  function showHomeRooms(branchId = null, sourceRooms = homeRooms) {
+    const nextRooms = branchId
+      ? sourceRooms.filter((room) => String(room.branch_id || room.branch?.id || "") === String(branchId))
+      : sourceRooms;
+
+    setRooms(nextRooms);
+    if (!nextRooms.length) {
+      setNotice({ type: "muted", text: "Chưa có phòng nào đang hiển thị." });
+    }
+  }
+
   function updateSearch(field, value) {
     setSearch((current) => {
       if (field === "booking_type") {
-        const nextSlot = bookingSlots.find((slot) => slot.type === value);
-        return { ...current, booking_type: value, slot_id: nextSlot?.id || "" };
+        return { ...current, booking_type: value, slot_id: "" };
       }
       return { ...current, [field]: value };
     });
@@ -163,25 +226,37 @@ function App() {
     try {
       const payload = await apiFetch("/home");
       const branchNames = {
-        "pham-van-thuan-tam-hiep": "Bien Hoa",
-        "ha-huy-giap-trung-dung": "Ha Huy Giap",
-        "chu-van-an-long-thanh": "Long Thanh",
-        "111-d1-chanh-nghia": "Thu Dau Mot",
-        "vo-thi-sau-di-an": "Di An"
+        "pham-van-thuan-tam-hiep": "Biên Hòa",
+        "ha-huy-giap-trung-dung": "Hà Huy Giáp",
+        "chu-van-an-long-thanh": "Long Thành",
+        "111-d1-chanh-nghia": "Thủ Dầu Một",
+        "vo-thi-sau-di-an": "Dĩ An"
       };
       setBranches((payload.data?.branches || []).map((branch) => ({
         ...branch,
         nav_name: branchNames[branch.slug] || branch.name
       })));
+      const nextBookingOptions = normalizeBookingOptions(payload.data?.booking_options || []);
+      const defaultOptions = nextBookingOptions.length ? nextBookingOptions : bookingSlots;
+      setBookingOptions(defaultOptions);
+      setSearch(createEmptySearch());
+      setSelectedBranchId(null);
+      setHomeRooms(payload.data?.rooms || []);
+      showHomeRooms(null, payload.data?.rooms || []);
     } catch (error) {
       setNotice({ type: "error", text: error.message });
     }
   }
 
   function selectBranch(branchId, options = {}) {
-    setSelectedBranchId(branchId ? Number(branchId) : null);
+    const nextBranchId = branchId ? Number(branchId) : null;
+    const nextSearch = createEmptySearch();
+    setSelectedBranchId(nextBranchId);
+    setSearch(nextSearch);
     window.history.pushState({}, "", "/");
     setCurrentRoomId(null);
+    setNotice(null);
+    showHomeRooms(nextBranchId);
     if (options.scroll !== false) {
       setTimeout(() => document.getElementById(branchId ? "rooms" : "top")?.scrollIntoView({ behavior: "smooth" }), 0);
     }
@@ -203,8 +278,9 @@ function App() {
   }
 
   function openRoomDetail(room) {
-    window.history.pushState({}, "", `/rooms/${room.id}`);
-    setCurrentRoomId(String(room.id));
+    const roomKey = room.slug || room.id;
+    window.history.pushState({}, "", `/rooms/${roomKey}`);
+    setCurrentRoomId(String(roomKey));
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -221,12 +297,11 @@ function App() {
     setNotice(null);
 
     try {
-      const [roomPayload, imagePayload] = await Promise.all([
-        apiFetch(`/rooms/${roomId}`),
-        apiFetch(`/room-images?room_id=${roomId}`)
-      ]);
+      const roomPayload = await apiFetch(`/rooms/${roomId}`);
       const apiImages = roomPayload.data?.images || [];
-      const legacyImages = imagePayload.data || [];
+      const legacyImages = apiImages.length
+        ? []
+        : (await apiFetch(`/room-images?room_id=${roomPayload.data?.id || roomId}`)).data || [];
       setDetailRoom({
         ...roomPayload.data,
         images: apiImages.length ? apiImages : legacyImages
@@ -265,7 +340,7 @@ function App() {
       setSelectedRoom(null);
       setNotice({
         type: "success",
-        text: `Da gui booking #${payload.data.id}. Tong tien tam tinh ${money(payload.data.total_price)}.`
+        text: `Đã gửi booking #${payload.data.id}. Tổng tiền tạm tính ${money(payload.data.total_price)}.`
       });
       await loadRooms();
     } catch (error) {
@@ -296,7 +371,7 @@ function App() {
     localStorage.removeItem("homestay_user");
     setAuthToken("");
     setAuthUser(null);
-    setNotice({ type: "muted", text: "Da dang xuat tai khoan khach." });
+    setNotice({ type: "muted", text: "Đã đăng xuất tài khoản khách." });
   }
 
   async function submitAuth(event) {
@@ -322,7 +397,7 @@ function App() {
       setAuthToken(payload.token);
       setAuthUser(payload.user);
       setAuthOpen(false);
-      setNotice({ type: "success", text: `Xin chao ${payload.user?.name || payload.user?.phone || "ban"}!` });
+      setNotice({ type: "success", text: `Xin chào ${payload.user?.name || payload.user?.phone || "bạn"}!` });
     } catch (error) {
       setAuthNotice({ type: "error", text: error.message });
     } finally {
@@ -335,15 +410,8 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!currentRoomId && !isAdminRoute) {
-      setRooms([]);
-      setNotice(null);
-    }
-  }, [selectedBranchId]);
-
-  useEffect(() => {
     function handlePopState() {
-      setCurrentRoomId(getRoomIdFromPath());
+      setCurrentRoomId(getRoomKeyFromPath());
       setIsAdminRoute(window.location.pathname.startsWith("/admin"));
     }
 
@@ -386,6 +454,7 @@ function App() {
         <>
         <HeroSection
           branches={branches}
+          bookingOptions={bookingOptions}
           selectedBranchId={selectedBranchId}
           search={search}
           loading={loading}
@@ -422,6 +491,21 @@ function App() {
           }}
         />
       )}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 4200,
+          style: {
+            borderRadius: "8px",
+            border: "1px solid #fecdd3",
+            background: "#fff1f2",
+            color: "#be123c",
+            fontSize: "14px",
+            fontWeight: 800,
+            padding: "14px 16px"
+          }
+        }}
+      />
     </div>
   );
 }
@@ -436,7 +520,13 @@ function AdminPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("");
   const [perPage, setPerPage] = useState("10");
+  const [page, setPage] = useState(1);
   const [amenityOptions, setAmenityOptions] = useState([]);
+  const [packageOptions, setPackageOptions] = useState([]);
+  const [slotOptions, setSlotOptions] = useState([]);
+  const [branchOptions, setBranchOptions] = useState([]);
+  const [roomOptions, setRoomOptions] = useState([]);
+  const [ratePlanOptions, setRatePlanOptions] = useState([]);
   const [selectedRow, setSelectedRow] = useState(null);
   const [form, setForm] = useState({});
   const [loading, setLoading] = useState(false);
@@ -474,7 +564,9 @@ function AdminPage() {
 
     return (!term || rowText.includes(term)) && statusMatched && (!dateFilter || rowDate === dateFilter);
   });
-  const visibleListRows = filteredRows.slice(0, Number(perPage));
+  const lastPage = Math.max(Math.ceil(filteredRows.length / Number(perPage)), 1);
+  const currentPage = Math.min(page, lastPage);
+  const visibleListRows = filteredRows.slice((currentPage - 1) * Number(perPage), currentPage * Number(perPage));
   const resourceIcons = {
     amenities: Sofa,
     news: Film,
@@ -497,7 +589,7 @@ function AdminPage() {
   function blankForm(resource = activeResource) {
     return resource.fields.reduce((result, field) => {
       if (booleanFields.has(field)) result[field] = true;
-      else if (field === "amenity_ids") result[field] = [];
+      else if (field === "amenity_ids" || field === "package_ids" || field === "slot_codes") result[field] = [];
       else if (field === "room_image_urls") result[field] = [];
       else result[field] = "";
       return result;
@@ -588,7 +680,7 @@ function AdminPage() {
     setForm(
       activeResource.fields.reduce((result, field) => {
         result[field] = field === "password" ? "" : row[field] ?? (booleanFields.has(field) ? false : "");
-        if (field === "amenity_ids") result[field] = Array.isArray(row[field]) ? row[field].map(String) : [];
+        if (field === "amenity_ids" || field === "package_ids" || field === "slot_codes") result[field] = Array.isArray(row[field]) ? row[field].map(String) : [];
         if (field === "room_image_urls") result[field] = Array.isArray(row[field]) ? row[field] : [];
         return result;
       }, {})
@@ -598,7 +690,18 @@ function AdminPage() {
   }
 
   function updateAdminField(field, value) {
-    setForm((current) => ({ ...current, [field]: value }));
+    setForm((current) => {
+      const next = { ...current, [field]: value };
+      const canAutoSlug = activeResource.fields.includes("slug") && ["name", "title", "label"].includes(field);
+
+      if (canAutoSlug) {
+        const currentSourceSlug = toAdminSlug(current[field]);
+        const slugIsAuto = !current.slug || current.slug === currentSourceSlug;
+        if (slugIsAuto) next.slug = toAdminSlug(value);
+      }
+
+      return next;
+    });
   }
 
   async function loadAmenityOptions() {
@@ -608,6 +711,77 @@ function AdminPage() {
     } catch (error) {
       setAmenityOptions([]);
     }
+  }
+
+  async function loadPackageOptions() {
+    try {
+      const payload = await adminRequest("/rental-packages/all?active=1");
+      setPackageOptions(payload.data || []);
+    } catch (error) {
+      setPackageOptions([]);
+    }
+  }
+
+  async function loadSlotOptions() {
+    try {
+      const payload = await adminRequest("/slot-templates/all");
+      const fromApi = (payload.data || []).map((slot) => ({
+        id: slot.code,
+        code: slot.code,
+        name: slot.label || `${String(slot.start_time || "").slice(0, 5)} - ${String(slot.end_time || "").slice(0, 5)}`,
+        rate_name: slot.rental_package_code || slot.rate_name
+      })).filter((slot) => slot.code);
+      const fallback = bookingSlots.map((slot) => ({
+        id: slot.id,
+        code: slot.id,
+        name: slot.subLabel ? `${slot.label} ${slot.subLabel}` : slot.label,
+        rate_name: slot.rateName
+      }));
+      const merged = [...fromApi, ...fallback].reduce((items, slot) => {
+        if (!items.some((item) => item.code === slot.code)) items.push(slot);
+        return items;
+      }, []);
+      setSlotOptions(merged);
+    } catch (error) {
+      setSlotOptions(bookingSlots.map((slot) => ({
+        id: slot.id,
+        code: slot.id,
+        name: slot.subLabel ? `${slot.label} ${slot.subLabel}` : slot.label,
+        rate_name: slot.rateName
+      })));
+    }
+  }
+
+  async function loadRelationOptions() {
+    await Promise.all([
+      adminRequest("/branches/all?active=1").then((payload) => setBranchOptions(payload.data || [])).catch(() => setBranchOptions([])),
+      adminRequest("/rooms/all?active=1").then((payload) => setRoomOptions(payload.data || [])).catch(() => setRoomOptions([])),
+      adminRequest("/rate-plans/all?active=1").then((payload) => setRatePlanOptions(payload.data || [])).catch(() => setRatePlanOptions([])),
+      adminRequest("/rental-packages/all?active=1").then((payload) => setPackageOptions(payload.data || [])).catch(() => setPackageOptions([])),
+      loadSlotOptions()
+    ]);
+  }
+
+  function relationOptions(field) {
+    if (field === "branch_id") {
+      return branchOptions.map((item) => ({ value: item.id, label: item.name || item.address || `Chi nhánh #${item.id}` }));
+    }
+    if (field === "room_id") {
+      return roomOptions.map((item) => ({
+        value: item.id,
+        label: `${item.name || `Phòng #${item.id}`}${item.branch?.name ? ` - ${item.branch.name}` : ""}`
+      }));
+    }
+    if (field === "rental_package_id") {
+      return packageOptions.map((item) => ({ value: item.id, label: item.name || item.code || `Gói #${item.id}` }));
+    }
+    if (field === "rate_plan_id") {
+      return ratePlanOptions.map((item) => ({
+        value: item.id,
+        label: `${item.room_name || item.room?.name || `Phòng #${item.room_id}`} - ${item.rental_package_name || item.name || item.code || `Gói #${item.id}`}`
+      }));
+    }
+    return [];
   }
 
   function normalizeAdminPayload() {
@@ -635,6 +809,7 @@ function AdminPage() {
       setNotice({ type: "success", text: selectedRow ? "Đã cập nhật nội dung." : "Đã tạo nội dung mới." });
       setSelectedRow(null);
       setForm(blankForm());
+      if (activeResource.key === "slot-templates") await loadSlotOptions();
       await loadAdminRows();
       setAdminView("list");
     } catch (error) {
@@ -712,7 +887,149 @@ function AdminPage() {
   }
 
   function previewValue(row) {
-    return row.name || row.title || row.full_name || row.key || row.slug || row.email || `#${row.id}`;
+    return row.name || row.title || row.full_name || row.booking_code || row.key || row.slug || row.email || `#${row.id}`;
+  }
+
+  function relationSummary(row) {
+    const parts = [];
+    const packageNames = row.packages?.length
+      ? row.packages.map((item) => item.name).filter(Boolean)
+      : (row.package_ids || [])
+        .map((id) => packageOptions.find((item) => String(item.id) === String(id))?.name)
+        .filter(Boolean);
+
+    if (row.branch?.name || row.branch_name) parts.push(`Chi nhánh: ${row.branch?.name || row.branch_name}`);
+    if (row.room?.name || row.room_name) parts.push(`Phòng: ${row.room?.name || row.room_name}`);
+    if (row.customer_name) parts.push(`Khách: ${row.customer_name}`);
+    if (row.customer_phone) parts.push(`SĐT: ${row.customer_phone}`);
+    if (row.rental_package_name) parts.push(`Gói: ${row.rental_package_name}`);
+    if (row.rate_name) parts.push(`Gói: ${row.rate_name}`);
+    if (packageNames.length) parts.push(`Gói thuê: ${packageNames.join(", ")}`);
+    if (row.slot_codes?.length) parts.push(`Khung giờ: ${row.slot_codes.join(", ")}`);
+    if (row.max_guests) parts.push(`Tối đa: ${row.max_guests} khách`);
+    if (row.price_amount !== undefined) parts.push(`Giá: ${money(row.price_amount)}`);
+    if (row.total_amount !== undefined || row.total_price !== undefined) parts.push(`Tổng: ${money(row.total_amount ?? row.total_price)}`);
+    if (row.start_time && row.end_time) parts.push(`Giờ: ${String(row.start_time).slice(0, 5)} - ${String(row.end_time).slice(0, 5)}`);
+    if (row.check_in && row.check_out) {
+      parts.push(`Lịch: ${new Date(row.check_in).toLocaleDateString("vi-VN")} - ${new Date(row.check_out).toLocaleDateString("vi-VN")}`);
+    }
+    if (!parts.length) {
+      const fallback = row.description || row.address || row.phone || row.slug || row.code || "";
+      if (fallback) parts.push(fallback);
+    }
+    return parts.slice(0, 6);
+  }
+
+  function adminColumns() {
+    const commonStatus = { key: "status_display", label: "Trạng thái", render: (row) => statusText(row) };
+    const updatedAt = { key: "updated_at", label: "Cập nhật", render: (row) => formatAdminDate(row.updated_at) };
+
+    const byResource = {
+      rooms: [
+        { key: "name", label: "Tên phòng", primary: true },
+        { key: "slug", label: "Slug" },
+        { key: "branch", label: "Chi nhánh", render: (row) => row.branch?.name || row.branch_name || row.branch_id || "-" },
+        { key: "packages", label: "Gói thuê", render: (row) => packageNames(row).join(", ") || "-" },
+        { key: "slot_codes", label: "Khung giờ", render: (row) => row.slot_codes?.join(", ") || "-" },
+        { key: "max_guests", label: "Khách" },
+        commonStatus,
+        updatedAt
+      ],
+      "rental-packages": [
+        { key: "name", label: "Tên gói", primary: true },
+        { key: "code", label: "Mã" },
+        { key: "price_amount", label: "Giá", render: (row) => money(row.price_amount || 0) },
+        { key: "duration_minutes", label: "Thời lượng", render: (row) => row.duration_minutes ? `${row.duration_minutes} phút` : "-" },
+        commonStatus,
+        updatedAt
+      ],
+      "room-time-slots": [
+        { key: "label", label: "Khung giờ", primary: true },
+        { key: "room", label: "Phòng", render: (row) => row.room_name || row.room?.name || row.room_id || "-" },
+        { key: "rate", label: "Gói thuê", render: (row) => row.rate_name || row.rental_package_name || row.rate_plan_id || "-" },
+        { key: "time", label: "Giờ", render: (row) => `${String(row.start_time || "").slice(0, 5)} - ${String(row.end_time || "").slice(0, 5)}` },
+        { key: "crosses_midnight", label: "Qua ngày", render: (row) => row.crosses_midnight ? "Có" : "Không" },
+        commonStatus
+      ],
+      "slot-templates": [
+        { key: "label", label: "Khung giờ", primary: true },
+        { key: "rental_package_code", label: "Gói thuê" },
+        { key: "code", label: "Mã" },
+        { key: "time", label: "Giờ", render: (row) => `${String(row.start_time || "").slice(0, 5)} - ${String(row.end_time || "").slice(0, 5)}` },
+        { key: "crosses_midnight", label: "Qua ngày", render: (row) => row.crosses_midnight ? "Có" : "Không" },
+        commonStatus
+      ],
+      bookings: [
+        { key: "booking_code", label: "Mã booking", primary: true },
+        { key: "customer_name", label: "Khách" },
+        { key: "customer_phone", label: "SĐT" },
+        { key: "room", label: "Phòng", render: (row) => row.room_name || row.room?.name || row.room_id || "-" },
+        { key: "branch", label: "Chi nhánh", render: (row) => row.branch_name || row.branch?.name || row.branch_id || "-" },
+        { key: "total", label: "Tổng tiền", render: (row) => money(row.total_amount ?? row.total_price ?? 0) },
+        commonStatus
+      ],
+      branches: [
+        { key: "name", label: "Tên chi nhánh", primary: true },
+        { key: "address", label: "Địa chỉ" },
+        { key: "slug", label: "Slug" },
+        commonStatus,
+        updatedAt
+      ],
+      amenities: [
+        { key: "name", label: "Tên tiện nghi", primary: true },
+        { key: "icon", label: "Icon" },
+        { key: "position", label: "Vị trí" },
+        commonStatus,
+        updatedAt
+      ]
+    };
+
+    if (byResource[activeResource.key]) return byResource[activeResource.key];
+
+    const fields = activeResource.fields.filter((field) =>
+      !["password", "content", "description", "iframe", "room_image_urls", "amenity_ids", "package_ids"].includes(field)
+    );
+    return [
+      { key: fields[0] || "name", label: fieldLabel(fields[0] || "name"), primary: true },
+      ...fields.slice(1, 5).map((field) => ({ key: field, label: fieldLabel(field) })),
+      commonStatus
+    ];
+  }
+
+  function packageNames(row) {
+    return row.packages?.length
+      ? row.packages.map((item) => item.name).filter(Boolean)
+      : (row.package_ids || [])
+        .map((id) => packageOptions.find((item) => String(item.id) === String(id))?.name)
+        .filter(Boolean);
+  }
+
+  function formatAdminDate(value) {
+    return value ? new Date(value).toLocaleDateString("vi-VN") : "-";
+  }
+
+  function renderAdminCell(row, column) {
+    const value = column.render ? column.render(row) : row[column.key];
+    const display = value === undefined || value === null || value === "" ? "-" : value;
+
+    if (column.primary) {
+      return (
+        <button type="button" className="admin-row-title" onClick={() => startEdit(row)}>
+          {display}
+        </button>
+      );
+    }
+
+    if (column.key === "status_display") {
+      return (
+        <span className="admin-status-cell">
+          <i className={row.active === false || row.status === "cancelled" ? "status-dot off" : "status-dot"} />
+          {display}
+        </span>
+      );
+    }
+
+    return <span>{display}</span>;
   }
 
   function statusText(row) {
@@ -736,15 +1053,30 @@ function AdminPage() {
   }, [token, activeKey, adminView]);
 
   useEffect(() => {
-    if (token && activeResource.key === "rooms") loadAmenityOptions();
+    if (token && activeResource.key === "rooms") {
+      loadAmenityOptions();
+      loadPackageOptions();
+      loadSlotOptions();
+    }
+    if (token && activeResource.key === "slot-templates") {
+      loadPackageOptions();
+    }
   }, [token, activeResource.key]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [activeKey, searchText, statusFilter, dateFilter, perPage]);
+
+  useEffect(() => {
+    if (token && adminView !== "dashboard") loadRelationOptions();
+  }, [token, activeKey, adminView]);
 
   if (!token) {
     return (
       <main className="admin-login-shell">
         <form className="admin-login" onSubmit={login}>
           <div className="admin-login-brand">
-            <span><ShieldCheck size={24} /></span>
+            <BrandLogo className="admin-login-logo" showText={false} />
             <div>
               <h1>ftft CMS</h1>
               <p>Quản trị nội dung, phòng và booking.</p>
@@ -772,8 +1104,7 @@ function AdminPage() {
     <main className="admin-shell admin-template">
       <aside className="admin-sidebar">
         <div className="admin-brand">
-          <span className="admin-logo-mark">ft</span>
-          <strong>ftft</strong>
+          <BrandLogo className="admin-sidebar-logo" />
           <button type="button" aria-label="Thu gọn menu">
             <ChevronLeft size={18} />
           </button>
@@ -787,7 +1118,7 @@ function AdminPage() {
           }}
         >
           <LayoutDashboard size={18} />
-          Dashboards
+          Tổng quan
         </button>
         <nav className="admin-resource-nav">
           {Object.entries(groupedResources).map(([group, resources]) => (
@@ -823,7 +1154,7 @@ function AdminPage() {
                         className={adminView === "list" || selectedRow ? "active" : ""}
                         onClick={() => chooseResource(resource, "list")}
                       >
-                        <span><i /> DS {resource.label.toLowerCase()}</span>
+                        <span><i /> Danh sách {resource.label.toLowerCase()}</span>
                       </button>
                     </div>
                   )}
@@ -845,21 +1176,21 @@ function AdminPage() {
           <section className="admin-overview-grid">
             <div className="admin-analytics-card">
               <div className="admin-analytics-copy">
-                <h2>Website Analytics</h2>
-                <p>Total 28.5% Conversion Rate</p>
-                <h4>Traffic</h4>
+                <h2>Tổng quan vận hành</h2>
+                <p>Theo dõi phòng, booking và nội dung CMS</p>
+                <h4>Hoạt động</h4>
                 <div className="admin-analytics-stats">
                   <span><strong>{adminResources.length}</strong> Module</span>
-                  <span><strong>{rows.length}</strong> Page Views</span>
-                  <span><strong>{visibleRows}</strong> Leads</span>
-                  <span><strong>{inactiveRows}</strong> Conversions</span>
+                  <span><strong>{rows.length}</strong> Bản ghi</span>
+                  <span><strong>{visibleRows}</strong> Đang hiển thị</span>
+                  <span><strong>{inactiveRows}</strong> Tạm ẩn</span>
                 </div>
               </div>
               <img className="admin-analytics-illustration" src="/admin-template/card-website-analytics-1.png" alt="" />
             </div>
             <div className="admin-metric-card admin-sales-card">
-              <p>Average Daily Sales</p>
-              <span>Total Sales This Month</span>
+              <p>Doanh thu dự kiến</p>
+              <span>Tổng giá trị trong module hiện tại</span>
               <h3>{overviewTotal ? compactMoney(overviewTotal) : rows.length}</h3>
               <div className="admin-mini-bars" aria-hidden="true">
                 <i />
@@ -872,13 +1203,13 @@ function AdminPage() {
             </div>
             <div className="admin-metric-card admin-overview-card">
               <div className="admin-card-heading">
-                <p>Sales Overview</p>
+                <p>Tổng quan dữ liệu</p>
                 <b>+18.2%</b>
               </div>
               <h3>{activeResource.label}</h3>
               <div className="admin-sales-split">
-                <span><CreditCard size={18} /> Order <strong>62.2%</strong></span>
-                <span>Visits <strong>25.5%</strong></span>
+                <span><CreditCard size={18} /> Booking <strong>62.2%</strong></span>
+                <span>Lượt xem <strong>25.5%</strong></span>
               </div>
               <div className="admin-progress"><i /><b /></div>
             </div>
@@ -886,7 +1217,7 @@ function AdminPage() {
         ) : (
           <>
             <div className="admin-page-heading">
-              <h1>{(adminView === "create" ? (selectedRow ? "Sửa " : "Tạo mới ") : "DS ") + activeResource.label.toLowerCase()}</h1>
+              <h1>{(adminView === "create" ? (selectedRow ? "Sửa " : "Tạo mới ") : "Danh sách ") + activeResource.label.toLowerCase()}</h1>
               <div>
                 {adminView === "create" && (
                   <button className="ghost-btn admin-cancel-btn" type="button" onClick={() => setAdminView("list")}>
@@ -928,23 +1259,18 @@ function AdminPage() {
                     </button>
                   </div>
                 </div>
-                <div className="admin-list-tools">
-                  <select value={perPage} onChange={(event) => setPerPage(event.target.value)} aria-label="Số dòng hiển thị">
-                    <option value="10">10</option>
-                    <option value="25">25</option>
-                    <option value="50">50</option>
-                    <option value="100">100</option>
-                  </select>
-                  <span>{filteredRows.length} kết quả</span>
-                </div>
                 {loading ? (
                   <div className="admin-loading"><Loader2 className="spin" size={20} /> Đang tải dữ liệu...</div>
                 ) : (
+                  <>
                   <div className="admin-table-wrap">
-                    <table className="admin-table">
+                    <table className="admin-table admin-dynamic-table">
                       <thead>
                         <tr>
                           <th>ID</th>
+                          {adminColumns().map((column) => (
+                            <th key={column.key}>{column.label}</th>
+                          ))}
                           <th>Nội dung</th>
                           <th>Trạng thái</th>
                           <th>Cập nhật</th>
@@ -955,11 +1281,18 @@ function AdminPage() {
                         {visibleListRows.map((row) => (
                           <tr key={row.id} className={selectedRow?.id === row.id ? "selected" : ""}>
                             <td>#{row.id}</td>
+                            {adminColumns().map((column) => (
+                              <td key={column.key}>{renderAdminCell(row, column)}</td>
+                            ))}
                             <td>
                               <button type="button" className="admin-row-title" onClick={() => startEdit(row)}>
                                 {previewValue(row)}
                               </button>
-                              <span>{row.description || row.address || row.phone || row.slug || ""}</span>
+                              <div className="admin-row-meta">
+                                {relationSummary(row).map((item) => (
+                                  <span key={item}>{item}</span>
+                                ))}
+                              </div>
                             </td>
                             <td>
                               <i className={row.active === false || row.status === "cancelled" ? "status-dot off" : "status-dot"} />
@@ -976,12 +1309,31 @@ function AdminPage() {
                         ))}
                         {!visibleListRows.length && (
                           <tr>
-                            <td colSpan="5" className="admin-empty">Chưa có dữ liệu.</td>
+                            <td colSpan={adminColumns().length + 5} className="admin-empty">Chưa có dữ liệu.</td>
                           </tr>
                         )}
                       </tbody>
                     </table>
                   </div>
+                  <div className="admin-list-footer">
+                    <select value={perPage} onChange={(event) => setPerPage(event.target.value)} aria-label="Số dòng hiển thị">
+                      <option value="10">10</option>
+                      <option value="25">25</option>
+                      <option value="50">50</option>
+                      <option value="100">100</option>
+                    </select>
+                    <span>{filteredRows.length} kết quả</span>
+                    <div className="admin-pagination">
+                      <button type="button" disabled={currentPage <= 1} onClick={() => setPage((value) => Math.max(value - 1, 1))}>
+                        <ChevronLeft size={16} />
+                      </button>
+                      <span>{currentPage}/{lastPage}</span>
+                      <button type="button" disabled={currentPage >= lastPage} onClick={() => setPage((value) => Math.min(value + 1, lastPage))}>
+                        <ChevronRight size={16} />
+                      </button>
+                    </div>
+                  </div>
+                  </>
                 )}
               </section>
             ) : (
@@ -1009,6 +1361,22 @@ function AdminPage() {
                           options={amenityOptions}
                           value={form[field] || []}
                           onChange={(value) => updateAdminField(field, value)}
+                          emptyLabel="Chọn tiện nghi"
+                          selectedLabel="tiện nghi đã chọn"
+                          searchLabel="Tìm tiện nghi..."
+                          notFoundLabel="Không tìm thấy tiện nghi."
+                        />
+                      ) : field === "package_ids" ? (
+                        <AdminPackageMultiSelect
+                          options={packageOptions}
+                          value={form[field] || []}
+                          onChange={(value) => updateAdminField(field, value)}
+                        />
+                      ) : field === "slot_codes" ? (
+                        <AdminSlotMultiSelect
+                          options={slotOptions}
+                          value={form[field] || []}
+                          onChange={(value) => updateAdminField(field, value)}
                         />
                       ) : field === "room_image_urls" ? (
                         <AdminRoomImagePicker
@@ -1017,6 +1385,28 @@ function AdminPage() {
                           onUpload={(files) => uploadRoomImages(field, files)}
                           onRemove={(imageUrl) => updateAdminField(field, (form[field] || []).filter((item) => item !== imageUrl))}
                         />
+                      ) : ["branch_id", "room_id", "rate_plan_id", "rental_package_id"].includes(field) ? (
+                        <AdminRelationSelect
+                          value={form[field] || ""}
+                          options={relationOptions(field)}
+                          placeholder={`Chọn ${fieldLabel(field).toLowerCase()}`}
+                          onChange={(value) => updateAdminField(field, value)}
+                        />
+                      ) : field === "rental_package_code" ? (
+                        <select value={form[field] || ""} onChange={(event) => updateAdminField(field, event.target.value)}>
+                          <option value="">Chọn gói thuê</option>
+                          {packageOptions.map((option) => (
+                            <option key={option.id} value={option.code}>{option.name || option.code}</option>
+                          ))}
+                        </select>
+                      ) : field === "type" && activeResource.key === "rooms" ? (
+                        <select value={form[field] || ""} onChange={(event) => updateAdminField(field, event.target.value)}>
+                          <option value="">Chọn loại phòng</option>
+                          <option value="standard">Standard</option>
+                          <option value="cinema">Cinema</option>
+                          <option value="couple">Couple</option>
+                          <option value="vip">VIP</option>
+                        </select>
                       ) : textareaFields.has(field) ? (
                         <textarea
                           value={form[field] || ""}
@@ -1045,6 +1435,19 @@ function AdminPage() {
         )}
       </section>
     </main>
+  );
+}
+
+function AdminRelationSelect({ value, options, placeholder, onChange }) {
+  return (
+    <select value={value || ""} onChange={(event) => onChange(event.target.value)}>
+      <option value="">{placeholder}</option>
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
   );
 }
 
@@ -1119,6 +1522,163 @@ function AdminAmenityMultiSelect({ options, value, onChange }) {
               );
             })}
             {!filteredOptions.length && <p>Không tìm thấy tiện nghi.</p>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminPackageMultiSelect({ options, value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const selectedIds = (value || []).map(String);
+  const selectedOptions = options.filter((option) => selectedIds.includes(String(option.id)));
+  const filteredOptions = options.filter((option) =>
+    String(`${option.name || ""} ${option.code || ""}`).toLowerCase().includes(query.trim().toLowerCase())
+  );
+
+  function toggleOption(id) {
+    const idText = String(id);
+    const next = selectedIds.includes(idText)
+      ? selectedIds.filter((item) => item !== idText)
+      : [...selectedIds, idText];
+    onChange(next.map(Number));
+  }
+
+  function removeOption(id) {
+    onChange(selectedIds.filter((item) => item !== String(id)).map(Number));
+  }
+
+  return (
+    <div className="admin-shadcn-multiselect">
+      <button
+        className={open ? "admin-ms-trigger open" : "admin-ms-trigger"}
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span>{selectedOptions.length ? `${selectedOptions.length} gói thuê đã chọn` : "Chọn gói thuê"}</span>
+        <ChevronRight size={16} />
+      </button>
+
+      {selectedOptions.length ? (
+        <div className="admin-ms-badges">
+          {selectedOptions.map((option) => (
+            <span key={option.id}>
+              {option.name}
+              <button type="button" onClick={() => removeOption(option.id)} aria-label={`Bỏ ${option.name}`}>
+                <X size={12} />
+              </button>
+            </span>
+          ))}
+        </div>
+      ) : null}
+
+      {open && (
+        <div className="admin-ms-popover">
+          <div className="admin-ms-search">
+            <Search size={15} />
+            <input
+              value={query}
+              placeholder="Tìm gói thuê..."
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </div>
+          <div className="admin-ms-list">
+            {filteredOptions.map((option) => {
+              const checked = selectedIds.includes(String(option.id));
+              return (
+                <button
+                  key={option.id}
+                  className={checked ? "selected" : ""}
+                  type="button"
+                  onClick={() => toggleOption(option.id)}
+                >
+                  <span className="admin-ms-check">{checked && <Check size={13} />}</span>
+                  <span>{option.name}</span>
+                </button>
+              );
+            })}
+            {!filteredOptions.length && <p>Không tìm thấy gói thuê.</p>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminSlotMultiSelect({ options, value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const selectedCodes = (value || []).map(String);
+  const selectedOptions = options.filter((option) => selectedCodes.includes(String(option.code || option.id)));
+  const filteredOptions = options.filter((option) =>
+    String(`${option.name || ""} ${option.code || ""} ${option.rate_name || ""}`).toLowerCase().includes(query.trim().toLowerCase())
+  );
+
+  function toggleOption(code) {
+    const codeText = String(code);
+    const next = selectedCodes.includes(codeText)
+      ? selectedCodes.filter((item) => item !== codeText)
+      : [...selectedCodes, codeText];
+    onChange(next);
+  }
+
+  function removeOption(code) {
+    onChange(selectedCodes.filter((item) => item !== String(code)));
+  }
+
+  return (
+    <div className="admin-shadcn-multiselect">
+      <button
+        className={open ? "admin-ms-trigger open" : "admin-ms-trigger"}
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span>{selectedOptions.length ? `${selectedOptions.length} khung giờ đã chọn` : "Chọn khung giờ"}</span>
+        <ChevronRight size={16} />
+      </button>
+
+      {selectedOptions.length ? (
+        <div className="admin-ms-badges">
+          {selectedOptions.map((option) => (
+            <span key={option.code || option.id}>
+              {option.name}
+              <button type="button" onClick={() => removeOption(option.code || option.id)} aria-label={`Bỏ ${option.name}`}>
+                <X size={12} />
+              </button>
+            </span>
+          ))}
+        </div>
+      ) : null}
+
+      {open && (
+        <div className="admin-ms-popover">
+          <div className="admin-ms-search">
+            <Search size={15} />
+            <input
+              value={query}
+              placeholder="Tìm khung giờ..."
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </div>
+          <div className="admin-ms-list">
+            {filteredOptions.map((option) => {
+              const code = option.code || option.id;
+              const checked = selectedCodes.includes(String(code));
+              return (
+                <button
+                  key={code}
+                  className={checked ? "selected" : ""}
+                  type="button"
+                  onClick={() => toggleOption(code)}
+                >
+                  <span className="admin-ms-check">{checked && <Check size={13} />}</span>
+                  <span>{option.name}{option.rate_name ? ` - ${option.rate_name}` : ""}</span>
+                </button>
+              );
+            })}
+            {!filteredOptions.length && <p>Không tìm thấy khung giờ.</p>}
           </div>
         </div>
       )}
@@ -1283,6 +1843,12 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack })
     setDetailForm((current) => ({ ...current, [field]: value }));
   }
 
+  function showDetailValidation(text) {
+    const nextNotice = { type: "error", text };
+    setDetailNotice(nextNotice);
+    toast.error(text);
+  }
+
   async function loadAvailability() {
     if (!room?.id || !firstBookingDate) return;
     setAvailabilityLoading(true);
@@ -1295,7 +1861,7 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack })
       const payload = await apiFetch(`/rooms/${room.id}/availability?${params.toString()}`);
       setAvailabilityRows(payload.data || []);
     } catch (error) {
-      setDetailNotice({ type: "error", text: `Khong tai duoc lich phong: ${error.message}` });
+      setDetailNotice({ type: "error", text: `Không tải được lịch phòng: ${error.message}` });
       setAvailabilityRows([]);
     } finally {
       setAvailabilityLoading(false);
@@ -1319,15 +1885,15 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack })
     setPaymentBooking(null);
 
     if (!selectedSlots.length) {
-      setDetailNotice({ type: "error", text: "Chon it nhat 1 khung gio truoc nha." });
+      showDetailValidation("Chọn ít nhất 1 khung giờ trước nha.");
       return;
     }
     if (!detailForm.full_name.trim() || !detailForm.phone.trim()) {
-      setDetailNotice({ type: "error", text: "Nhap ho ten va so dien thoai de tao booking." });
+      showDetailValidation("Nhập họ tên và số điện thoại để tạo booking.");
       return;
     }
     if (!detailForm.adult_confirm || !detailForm.return_confirm) {
-      setDetailNotice({ type: "error", text: "Ban can tick xac nhan thong tin truoc khi dat phong." });
+      showDetailValidation("Bạn cần tick xác nhận thông tin trước khi đặt phòng.");
       return;
     }
 
@@ -1347,7 +1913,7 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack })
 
       setPaymentBooking(payload.data);
       setSelectedSlots([]);
-      setDetailNotice({ type: "success", text: "Da tao booking. Quet VietQR de giu phong trong 10 phut." });
+      setDetailNotice({ type: "success", text: "Đã tạo booking. Thanh toán để giữ phòng trong 10 phút." });
       await loadAvailability();
     } catch (error) {
       setDetailNotice({ type: "error", text: error.message });
@@ -1360,7 +1926,7 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack })
     const content = paymentBooking?.payment?.transfer_content;
     if (!content) return;
     navigator.clipboard?.writeText(content);
-    setDetailNotice({ type: "success", text: "Da copy noi dung chuyen khoan." });
+    setDetailNotice({ type: "success", text: "Đã copy nội dung thanh toán." });
   }
 
   async function refreshPaymentStatus(bookingId, silent = true) {
@@ -1379,13 +1945,13 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack })
       });
 
       if (payload.data?.status === "confirmed" || payload.data?.payment?.status === "paid") {
-        setDetailNotice({ type: "success", text: "Thanh toan thanh cong. Booking da duoc xac nhan." });
+        setDetailNotice({ type: "success", text: "Thanh toán thành công. Booking đã được xác nhận." });
         await loadAvailability();
       } else if (payload.data?.status === "expired" || payload.data?.payment?.status === "cancelled") {
-        setDetailNotice({ type: "error", text: "Booking da qua 10 phut chua thanh toan nen phong da duoc tra lai." });
+        setDetailNotice({ type: "error", text: "Booking đã quá 10 phút chưa thanh toán nên phòng đã được trả lại." });
         await loadAvailability();
       } else if (!silent) {
-        setDetailNotice({ type: "muted", text: "Dang cho xac nhan thanh toan." });
+        setDetailNotice({ type: "muted", text: "Đang chờ xác nhận thanh toán." });
       }
     } catch (error) {
       if (!silent) setDetailNotice({ type: "error", text: error.message });
@@ -1398,18 +1964,6 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack })
     setAvailabilityRows([]);
     if (room?.id) loadAvailability();
   }, [room?.id, search.booking_date]);
-
-  useEffect(() => {
-    if (!room?.id || availabilityLoading || selectedSlots.length) return;
-    const searchedSlot = detailSlots.find((slot) => slot.code === search.slot_id);
-    if (!searchedSlot || !firstBookingDate) return;
-
-    const key = `${firstBookingDate}|${searchedSlot.id}`;
-    const availability = slotStatusMap.get(key);
-    if (!availability || availability.status === "available") {
-      setSelectedSlots([key]);
-    }
-  }, [room?.id, availabilityLoading, firstBookingDate, search.slot_id, detailSlots, slotStatusMap, selectedSlots.length]);
 
   useEffect(() => {
     const bookingId = paymentBooking?.id;
@@ -1426,10 +1980,10 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack })
       if (String(booking.id) !== String(bookingId)) return;
       setPaymentBooking(booking);
       if (booking.status === "confirmed" || booking.payment?.status === "paid") {
-        setDetailNotice({ type: "success", text: "Thanh toan thanh cong. Booking da duoc xac nhan." });
+        setDetailNotice({ type: "success", text: "Thanh toán thành công. Booking đã được xác nhận." });
       }
       if (booking.status === "expired") {
-        setDetailNotice({ type: "error", text: "Booking da qua 10 phut chua thanh toan nen phong da duoc tra lai." });
+        setDetailNotice({ type: "error", text: "Booking đã quá 10 phút chưa thanh toán nên phòng đã được trả lại." });
       }
       await loadAvailability();
     });
@@ -1448,7 +2002,7 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack })
   if (loading) {
     return (
       <section className="room-detail-page">
-        <div className="empty-state"><Loader2 className="spin" size={22} /> Dang tai chi tiet phong...</div>
+        <div className="empty-state"><Loader2 className="spin" size={22} /> Đang tải chi tiết phòng...</div>
       </section>
     );
   }
@@ -1456,16 +2010,16 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack })
   if (!room) {
     return (
       <section className="room-detail-page">
-        <button className="back-btn" type="button" onClick={onBack}><ArrowLeft size={18} /> Quay lai</button>
+        <button className="back-btn" type="button" onClick={onBack}><ArrowLeft size={18} /> Quay lại</button>
         {notice && <div className={`notice ${notice.type}`}>{notice.text}</div>}
-        <div className="empty-state">Khong tim thay thong tin phong.</div>
+        <div className="empty-state">Không tìm thấy thông tin phòng.</div>
       </section>
     );
   }
 
   return (
     <section className="room-detail-page booking-detail-page">
-      <button className="back-btn detail-back-btn" type="button" onClick={onBack}><ArrowLeft size={18} /> Quay lai</button>
+      <button className="back-btn detail-back-btn" type="button" onClick={onBack}><ArrowLeft size={18} /> Quay lại</button>
 
       <div className="booking-detail-layout">
         <div className="detail-left-column">
@@ -1475,21 +2029,21 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack })
 
           <div className="slot-booking-section">
             <div className="price-board">
-              <h2>Bang gia</h2>
+              <h2>Bảng giá</h2>
               <div className="price-row">
                 <span><strong>{compactMoney(200000)}</strong>d/3h</span>
-                <span><strong>{compactMoney(room.price_per_night || 370000)}</strong>d/dem</span>
-                <span><strong>{compactMoney(580000)}</strong>d/ngay</span>
+                <span><strong>{compactMoney(room.price_per_night || 370000)}</strong>đ/đêm</span>
+                <span><strong>{compactMoney(580000)}</strong>đ/ngày</span>
               </div>
             </div>
 
             <div className="slot-heading-row">
               <div>
-                <h2>Lua chon khung gio danh cho ban</h2>
+                <h2>Lựa chọn khung giờ dành cho bạn</h2>
                 <div className="slot-legend">
-                  <span><i className="legend-box booked" />Da Dat</span>
-                  <span><i className="legend-box available" />Con Trong</span>
-                  <span><i className="legend-box selected" />Dang chon</span>
+                  <span><i className="legend-box booked" />Đã đặt</span>
+                  <span><i className="legend-box available" />Còn trống</span>
+                  <span><i className="legend-box selected" />Đang chọn</span>
                 </div>
               </div>
               <button
@@ -1498,7 +2052,7 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack })
                 onClick={() => document.querySelector(".detail-booking-panel")?.scrollIntoView({ behavior: "smooth", block: "start" })}
               >
                 {availabilityLoading ? <Loader2 className="spin" size={16} /> : null}
-                Dat phong
+                Đặt phòng
               </button>
             </div>
 
@@ -1506,16 +2060,16 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack })
               <table className="slot-table">
                 <thead>
                   <tr>
-                    <th colSpan="2">Chi nhanh</th>
-                    <th colSpan={detailSlots.length}>{room.branch?.address || "134/35 Duong Ha Huy Giap, Phuong Trung Dung, Bien Hoa, Dong Nai"}</th>
+                    <th colSpan="2">Chi nhánh</th>
+                    <th colSpan={detailSlots.length}>{room.branch?.address || "134/35 Đường Hà Huy Giáp, Phường Trung Dũng, Biên Hòa, Đồng Nai"}</th>
                   </tr>
                   <tr>
-                    <th colSpan="2">Ten phong</th>
+                    <th colSpan="2">Tên phòng</th>
                     <th colSpan={detailSlots.length}>Libra 22</th>
                   </tr>
                   <tr>
-                    <th>Thu</th>
-                    <th>Ngay</th>
+                    <th>Thứ</th>
+                    <th>Ngày</th>
                     {detailSlots.map((slot) => (
                       <th key={slot.id}>
                         {slot.label}
@@ -1558,47 +2112,47 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack })
               </table>
             </div>
             <div className="slot-summary">
-              <p>** Khach hang duoc giam them 5% khi book 2 khung gio, 10% khi book 3 khung gio</p>
-              <strong>Tong tien tam tinh: {compactMoney(selectedTotal)} d</strong>
+              <p>** Khách hàng được giảm thêm 5% khi book 2 khung giờ, 10% khi book 3 khung giờ</p>
+              <strong>Tổng tiền tạm tính: {compactMoney(selectedTotal)} đ</strong>
             </div>
           </div>
 
           <div className="room-amenity-section">
-            <h2>Tien nghi phong</h2>
+            <h2>Tiện nghi phòng</h2>
             <div className="room-amenity-list">
-              <span><Utensils size={22} />Nha bep hien dai</span>
+              <span><Utensils size={22} />Nhà bếp hiện đại</span>
               <span><Film size={22} />Netflix</span>
-              <span><BedDouble size={22} />Giuong King</span>
-              <span><Projector size={22} />May chieu</span>
-              <span><ShieldCheck size={22} />Guong toan than</span>
-              <span><Wifi size={22} />Wifi toc do cao</span>
-              <span><Bath size={22} />Bon tam</span>
-              <span><WashingMachine size={22} />May giat tu dong</span>
+              <span><BedDouble size={22} />Giường King</span>
+              <span><Projector size={22} />Máy chiếu</span>
+              <span><ShieldCheck size={22} />Gương toàn thân</span>
+              <span><Wifi size={22} />Wifi tốc độ cao</span>
+              <span><Bath size={22} />Bồn tắm</span>
+              <span><WashingMachine size={22} />Máy giặt tự động</span>
               <span><Gamepad2 size={22} />Boardgames</span>
             </div>
           </div>
         </div>
 
         <aside className="detail-booking-panel">
-          <h2>Thong tin Dat phong</h2>
+          <h2>Thông tin đặt phòng</h2>
           {(detailNotice || notice) && (
             <div className={`notice ${detailNotice?.type || notice?.type}`}>{detailNotice?.text || notice?.text}</div>
           )}
           <input
             className="booking-text-input"
-            placeholder="Ho va ten"
+            placeholder="Họ và tên"
             value={detailForm.full_name}
             onChange={(event) => updateDetailForm("full_name", event.target.value)}
           />
           <input
             className="booking-text-input"
-            placeholder="So dien thoai"
+            placeholder="Số điện thoại"
             value={detailForm.phone}
             onChange={(event) => updateDetailForm("phone", event.target.value)}
           />
-          <p className="booking-note">* Ban vui long nhap dung so dien thoai, Home se gui thong tin check-in qua Zalo</p>
+          <p className="booking-note">* Bạn vui lòng nhập đúng số điện thoại, Home sẽ gửi thông tin check-in qua Zalo</p>
 
-          <label className="booking-label">So luong khach</label>
+          <label className="booking-label">Số lượng khách</label>
           <select
             className="booking-text-input"
             value={search.guests}
@@ -1609,19 +2163,19 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack })
             <option value="3">3</option>
             <option value="4">4</option>
           </select>
-          <p className="booking-note">* Neu &gt; 2 khach, Home xin phep phu thu 100k/khach oi.</p>
-          <p className="booking-note">* Home chi nhan toi da 2 khach neu khach book o khung gio qua dem.</p>
+          <p className="booking-note">* Nếu &gt; 2 khách, Home xin phép phụ thu 100k/khách ơi.</p>
+          <p className="booking-note">* Home chỉ nhận tối đa 2 khách nếu khách book ở khung giờ qua đêm.</p>
 
-          <label className="booking-label">Can cuoc cong dan</label>
+          <label className="booking-label">Căn cước công dân</label>
           <div className="id-upload-grid">
-            <button type="button"><ImagePlus size={30} /><span>Mat truoc</span></button>
-            <button type="button"><ImagePlus size={30} /><span>Mat sau</span></button>
+            <button type="button"><ImagePlus size={30} /><span>Mặt trước</span></button>
+            <button type="button"><ImagePlus size={30} /><span>Mặt sau</span></button>
           </div>
-          <p className="booking-note">* Thong tin CCCD cua ban duoc luu tru va bao mat rieng tu de khai bao luu tru, se duoc xoa bo sau khi ban check-out.</p>
+          <p className="booking-note">* Thông tin CCCD của bạn được lưu trữ và bảo mật riêng tư để khai báo lưu trú, sẽ được xóa bỏ sau khi bạn check-out.</p>
 
           <textarea
             className="booking-textarea"
-            placeholder="Ghi chu cho ftft"
+            placeholder="Ghi chú cho ftft"
             value={detailForm.note}
             onChange={(event) => updateDetailForm("note", event.target.value)}
           />
@@ -1632,7 +2186,7 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack })
               checked={detailForm.adult_confirm}
               onChange={(event) => updateDetailForm("adult_confirm", event.target.checked)}
             />
-            <span>Xac nhan moi nguoi da du tuoi vi thanh nien, hoac tre em phai co nguoi giam ho. nguoi Dat phong chiu trach nhiem voi thong tin nay.</span>
+            <span>Xác nhận mọi người đã đủ tuổi vị thành niên, hoặc trẻ em phải có người giám hộ. Người đặt phòng chịu trách nhiệm với thông tin này.</span>
           </label>
           <label className="booking-check">
             <input
@@ -1640,59 +2194,59 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack })
               checked={detailForm.return_confirm}
               onChange={(event) => updateDetailForm("return_confirm", event.target.checked)}
             />
-            <span>Sau khi quet ma thanh toan thanh cong ban hay quay lai day de chup thong tin Booking.</span>
+            <span>Sau khi quét mã thanh toán thành công, bạn hãy quay lại đây để chụp thông tin Booking.</span>
           </label>
 
           {paymentBooking?.payment && (
             <div className="vietqr-card">
               <div className="vietqr-title">
                 <CreditCard size={18} />
-                <span>{paymentBooking.payment.status === "paid" ? "Da thanh toan" : paymentBooking.payment.provider === "momo" ? "Thanh toan MoMo" : "Thanh toan VietQR"}</span>
+                <span>{paymentBooking.payment.status === "paid" ? "Đã thanh toán" : paymentBooking.payment.provider === "momo" ? "Thanh toán MoMo" : "Thanh toán VietQR"}</span>
               </div>
               {paymentBooking.payment.qr_url && (
-                <img src={paymentBooking.payment.qr_url} alt="Ma thanh toan" />
+                <img src={paymentBooking.payment.qr_url} alt="Mã thanh toán" />
               )}
               {paymentBooking.payment.provider === "momo" && !paymentBooking.payment.qr_url && (
                 <div className="momo-empty-qr">
                   <CreditCard size={34} />
-                  <span>MoMo khong tra anh QR trong response nay.</span>
-                  <strong>Bam nut ben duoi de mo trang thanh toan MoMo.</strong>
+                  <span>MoMo không trả ảnh QR trong response này.</span>
+                  <strong>Bấm nút bên dưới để mở trang thanh toán MoMo.</strong>
                 </div>
               )}
               <div className="vietqr-row">
-                <span>So tien</span>
+                <span>Số tiền</span>
                 <strong>{money(paymentBooking.payment.amount)}</strong>
               </div>
               <div className="vietqr-row">
-                <span>{paymentBooking.payment.provider === "momo" ? "Ma don" : "Noi dung"}</span>
+                <span>{paymentBooking.payment.provider === "momo" ? "Mã đơn" : "Nội dung"}</span>
                 <button type="button" onClick={copyTransferContent}>
                   {paymentBooking.payment.transfer_content} <Copy size={14} />
                 </button>
               </div>
               {paymentBooking.payment.raw_payload?.response?.payUrl && (
                 <a className="primary-btn full momo-pay-btn" href={paymentBooking.payment.raw_payload.response.payUrl} target="_blank" rel="noreferrer">
-                  Mo MoMo de thanh toan
+                  Mở MoMo để thanh toán
                 </a>
               )}
-              <p>Booking #{paymentBooking.booking_code}. He thong dang giu phong trong 10 phut.</p>
+              <p>Booking #{paymentBooking.booking_code}. Hệ thống đang giữ phòng trong 10 phút.</p>
               <button className="ghost-btn vietqr-refresh-btn" type="button" onClick={() => refreshPaymentStatus(paymentBooking.id, false)}>
                 <RefreshCw size={14} />
-                Kiem tra thanh toan
+                Kiểm tra thanh toán
               </button>
             </div>
           )}
 
-          <p className="policy-copy">Khi bam Dat phong dong nghia voi viec ban da doc va dong y voi cac <b>Noi quy</b> & <b>Chinh sach</b> cua ftft</p>
+          <p className="policy-copy">Khi bấm Đặt phòng đồng nghĩa với việc bạn đã đọc và đồng ý với các <b>Nội quy</b> & <b>Chính sách</b> của ftft</p>
 
           <div className="booking-warning">
-            <b>*Chu y:</b><br />
-            - Ban dang dat phong tai: Home - Ben Ninh Kieu, Can Tho.<br />
-            - Day la he thong dat phong tu dong, nen khi bam Dat phong ban se duoc chuyen sang quet ma QR de thanh toan qua App ngan hang.
+            <b>*Chú ý:</b><br />
+            - Bạn đang đặt phòng tại: Home - Bến Ninh Kiều, Cần Thơ.<br />
+            - Đây là hệ thống đặt phòng tự động, nên khi bấm Đặt phòng bạn sẽ được chuyển sang quét mã QR để thanh toán qua app ngân hàng.
           </div>
 
           <button className="primary-btn full detail-submit-btn" type="button" onClick={submitDetailBooking} disabled={detailSubmitting}>
             {detailSubmitting ? <Loader2 className="spin" size={17} /> : <CalendarCheck size={17} />}
-            Dat phong va lay QR
+            Đặt phòng và lấy QR
           </button>
         </aside>
       </div>

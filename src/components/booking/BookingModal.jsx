@@ -18,22 +18,22 @@ function BookingModal({
       <form className="booking-modal" onSubmit={onSubmit}>
         <div className="modal-head">
           <div>
-            <p className="eyebrow">Thong tin khach</p>
-            <h2 id="booking-modal-title">Dat {room.name}</h2>
+            <p className="eyebrow">Thông tin khách</p>
+            <h2 id="booking-modal-title">Đặt {room.name}</h2>
           </div>
-          <button className="icon-btn" type="button" onClick={onClose} aria-label="Dong form booking">
+          <button className="icon-btn" type="button" onClick={onClose} aria-label="Đóng form booking">
             <X size={20} />
           </button>
         </div>
 
         <div className="booking-summary">
-          <span>{search.booking_type === "hour" ? "Theo gio" : "Theo dem"}</span>
-          <strong>Tam tinh tu {money(totalPreview)}</strong>
+          <span>{search.booking_type === "hour" ? "Theo giờ" : "Theo đêm"}</span>
+          <strong>Tạm tính từ {money(totalPreview)}</strong>
         </div>
 
         <div className="form-grid">
           <label>
-            Ho ten
+            Họ tên
             <input
               value={form.customer_name}
               onChange={(event) => onChangeForm((current) => ({ ...current, customer_name: event.target.value }))}
@@ -41,7 +41,7 @@ function BookingModal({
             />
           </label>
           <label>
-            So dien thoai
+            Số điện thoại
             <input
               value={form.customer_phone}
               onChange={(event) => onChangeForm((current) => ({ ...current, customer_phone: event.target.value }))}
@@ -57,18 +57,18 @@ function BookingModal({
             />
           </label>
           <label>
-            Ghi chu
+            Ghi chú
             <input
               value={form.note}
               onChange={(event) => onChangeForm((current) => ({ ...current, note: event.target.value }))}
-              placeholder="Den som, can ho tro..."
+              placeholder="Đến sớm, cần hỗ trợ..."
             />
           </label>
         </div>
 
         <button className="primary-btn full" type="submit" disabled={submitting}>
           {submitting ? <Loader2 className="spin" size={18} /> : <CalendarCheck size={18} />}
-          Gui booking
+          Gửi booking
         </button>
       </form>
     </div>

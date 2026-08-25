@@ -1,30 +1,38 @@
-import { CalendarDays, Clock, Film, Loader2, MapPin, Search, Users } from "lucide-react";
-import { bookingSlots, heroShots } from "../../data/homeContent";
+import { CalendarDays, Clock, Loader2, MapPin, Search, Users } from "lucide-react";
+import { bookingSlots as fallbackBookingSlots, heroShots } from "../../data/homeContent";
+import BrandLogo from "../layout/BrandLogo";
 
-function HeroSection({ branches, selectedBranchId, search, loading, onSearch, onBranchChange, onUpdateSearch }) {
-  const visibleSlots = bookingSlots.filter((slot) => slot.type === search.booking_type);
+function HeroSection({ branches, bookingOptions = [], selectedBranchId, search, loading, onSearch, onBranchChange, onUpdateSearch }) {
+  const slots = bookingOptions.length ? bookingOptions : fallbackBookingSlots;
+  const visibleSlots = slots.filter((slot) => slot.type === search.booking_type);
+  const rateOptions = slots.reduce((result, slot) => {
+    if (!result.some((item) => item.value === slot.type)) {
+      result.push({ value: slot.type, label: slot.rateName || slot.type });
+    }
+    return result;
+  }, []);
 
   return (
     <section className="hero" id="booking">
       <div className="hero-stage">
         <div className="hero-backdrop">
           <div className="hero-brand">
-            <div className="line-logo"><Film size={54} /></div>
+            <BrandLogo className="hero-logo" showText={false} />
             <h1>ftft HOMESTAY & CINEMA</h1>
             <p>CHILL OUT & MOVIE ON</p>
           </div>
 
           <div className="callout callout-left">
-            <span>view ban cong<br />ngam hoang hon</span>
+            <span>view ban công<br />ngắm hoàng hôn</span>
           </div>
           <div className="callout callout-center">
-            <span>may chieu full HD<br />120 inches</span>
+            <span>máy chiếu full HD<br />120 inches</span>
           </div>
           <div className="callout callout-right">
-            <span>thoa suc chill<br />cung boardgames</span>
+            <span>thỏa sức chill<br />cùng boardgames</span>
           </div>
 
-          <div className="hero-shot-strip" aria-label="Anh noi bat">
+          <div className="hero-shot-strip" aria-label="Ảnh nổi bật">
             {heroShots.map((shot) => (
               <figure className="hero-shot" key={shot.label}>
                 <img src={shot.src} alt={shot.label} />
@@ -40,7 +48,6 @@ function HeroSection({ branches, selectedBranchId, search, loading, onSearch, on
               id="location"
               value={selectedBranchId || ""}
               onChange={(event) => onBranchChange(event.target.value || null)}
-              required
             >
               <option value="">Chọn chi nhánh</option>
               {branches.map((branch) => (
@@ -57,9 +64,14 @@ function HeroSection({ branches, selectedBranchId, search, loading, onSearch, on
               id="booking_type"
               value={search.booking_type}
               onChange={(event) => onUpdateSearch("booking_type", event.target.value)}
+              disabled={!selectedBranchId}
             >
-              <option value="hour">Theo 3 tiếng</option>
-              <option value="night">Qua đêm</option>
+              <option value="">Chọn loại đặt</option>
+              {rateOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -70,7 +82,7 @@ function HeroSection({ branches, selectedBranchId, search, loading, onSearch, on
               type="date"
               value={search.booking_date}
               onChange={(event) => onUpdateSearch("booking_date", event.target.value)}
-              required
+              disabled={!selectedBranchId}
             />
           </div>
 
@@ -80,8 +92,9 @@ function HeroSection({ branches, selectedBranchId, search, loading, onSearch, on
               id="slot_id"
               value={search.slot_id}
               onChange={(event) => onUpdateSearch("slot_id", event.target.value)}
-              required
+              disabled={!selectedBranchId || !search.booking_type}
             >
+              <option value="">Chọn khung giờ</option>
               {visibleSlots.map((slot) => (
                 <option key={slot.id} value={slot.id}>
                   {slot.label} {slot.subLabel || ""}
@@ -100,7 +113,7 @@ function HeroSection({ branches, selectedBranchId, search, loading, onSearch, on
                 min="1"
                 value={search.guests}
                 onChange={(event) => onUpdateSearch("guests", event.target.value)}
-                required
+                disabled={!selectedBranchId}
               />
               <span>khách</span>
             </div>

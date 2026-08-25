@@ -6,19 +6,19 @@ function IntroSection() {
       <div className="intro-media">
         <img
           src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=900&q=85"
-          alt="Phong homestay cho couple"
+          alt="Phòng homestay cho couple"
         />
         <div className="intro-caption">
-          <h2>Y tuong Hen Ho Cho Couple</h2>
-          <p>homestay tu check-in, khong ngai le tan</p>
+          <h2>Ý tưởng hẹn hò cho couple</h2>
+          <p>Homestay tự check-in, không ngại lễ tân</p>
         </div>
       </div>
 
       <div className="intro-copy">
-        <h2>Check-in linh hoat - nghi ngoi thoai mai !</h2>
+        <h2>Check-in linh hoạt - nghỉ ngơi thoải mái!</h2>
         <p>
-          ftft - homestay tien nghi tai Bien Hoa, Long Thanh,
-          Thu Dau Mot, Di An.
+          ftft - homestay tiện nghi tại Biên Hòa, Long Thành,
+          Thủ Dầu Một, Dĩ An.
         </p>
         <ul>
           {featureList.map((feature) => (
@@ -26,9 +26,9 @@ function IntroSection() {
           ))}
         </ul>
         <div className="intro-stats">
-          <div><strong>70+</strong><span>Phong nghi</span></div>
-          <div><strong>1000+</strong><span>Luot dat phong</span></div>
-          <div><strong>2000+</strong><span>Khach hang hai long</span></div>
+          <div><strong>70+</strong><span>Phòng nghỉ</span></div>
+          <div><strong>1000+</strong><span>Lượt đặt phòng</span></div>
+          <div><strong>2000+</strong><span>Khách hàng hài lòng</span></div>
         </div>
       </div>
     </section>

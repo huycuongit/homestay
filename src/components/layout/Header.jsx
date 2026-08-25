@@ -1,15 +1,15 @@
-import { Hotel, LogOut, UserRound } from "lucide-react";
+import { LogOut, UserRound } from "lucide-react";
+import BrandLogo from "./BrandLogo";
 
 function Header({ branches, selectedBranchId, user, onBranchSelect, onLoginClick, onLogout }) {
   return (
     <header className="topbar">
       <button className="brand brand-button" type="button" onClick={() => onBranchSelect(null)} aria-label="ftft Booking">
-        <span className="brand-mark"><Hotel size={18} /></span>
-        <span>ftft</span>
+        <BrandLogo className="site-brand-logo" />
       </button>
-      <nav className="nav-links" aria-label="Main navigation">
+      <nav className="nav-links" aria-label="Điều hướng chính">
         <button className={!selectedBranchId ? "nav-link-btn active" : "nav-link-btn"} type="button" onClick={() => onBranchSelect(null)}>
-          Trang chu
+          Trang chủ
         </button>
         {branches.map((branch) => (
           <button
@@ -21,20 +21,20 @@ function Header({ branches, selectedBranchId, user, onBranchSelect, onLoginClick
             {branch.nav_name || branch.name}
           </button>
         ))}
-        <a href="#contact">Lien he</a>
+        <a href="#contact">Liên hệ</a>
         {user ? (
           <button className="nav-auth-btn" type="button" onClick={onLogout}>
             <UserRound size={15} />
-            {user.name || user.phone || "Tai khoan"}
+            {user.name || user.phone || "Tài khoản"}
             <LogOut size={14} />
           </button>
         ) : (
           <button className="nav-auth-btn" type="button" onClick={onLoginClick}>
             <UserRound size={15} />
-            Dang nhap
+            Đăng nhập
           </button>
         )}
-        <a className="nav-cta" href="#booking">Dat phong ngay!</a>
+        <a className="nav-cta" href="#booking">Đặt phòng ngay!</a>
       </nav>
     </header>
   );
