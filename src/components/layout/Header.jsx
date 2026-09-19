@@ -1,27 +1,61 @@
-import { LogOut, UserRound } from "lucide-react";
+import { ArrowRight, ChevronDown, LogOut, Search, UserRound } from "lucide-react";
 import BrandLogo from "./BrandLogo";
 
-function Header({ branches, selectedBranchId, user, onBranchSelect, onLoginClick, onLogout }) {
+function Header({
+  branches = [],
+  publicPage = "home",
+  selectedBranchId,
+  user,
+  onBranchSelect,
+  onHomeClick,
+  onShowRooms,
+  onShowBooking,
+  onLoginClick,
+  onLogout,
+  settings = {}
+}) {
+  const selectedBranch = branches.find((branch) => String(branch.id) === String(selectedBranchId));
+  const siteName = settings.site_name || "ftft";
+
   return (
     <header className="topbar">
-      <button className="brand brand-button" type="button" onClick={() => onBranchSelect(null)} aria-label="ftft Booking">
-        <BrandLogo className="site-brand-logo" />
+      <button className="brand brand-button" type="button" onClick={onHomeClick} aria-label="ftft Booking">
+        <BrandLogo className="site-brand-logo" label={siteName} />
       </button>
       <nav className="nav-links" aria-label="Điều hướng chính">
-        <button className={!selectedBranchId ? "nav-link-btn active" : "nav-link-btn"} type="button" onClick={() => onBranchSelect(null)}>
+        <button className={publicPage === "home" && !selectedBranchId ? "nav-link-btn active" : "nav-link-btn"} type="button" onClick={onHomeClick}>
           Trang chủ
         </button>
-        {branches.map((branch) => (
-          <button
-            className={String(selectedBranchId || "") === String(branch.id) ? "nav-link-btn active" : "nav-link-btn"}
-            type="button"
-            key={branch.id}
-            onClick={() => onBranchSelect(branch.id)}
-          >
-            {branch.nav_name || branch.name}
+        <div className="nav-dropdown">
+          <button className={selectedBranchId ? "nav-link-btn active" : "nav-link-btn"} type="button">
+            {selectedBranch?.nav_name || selectedBranch?.name || "Chi nhánh"}
+            <ChevronDown size={14} />
           </button>
-        ))}
-        <a href="#contact">Liên hệ</a>
+          <div className="nav-dropdown-menu" role="menu">
+            <button type="button" onClick={() => onBranchSelect(null, { target: "rooms", scroll: false })}>
+              Tất cả chi nhánh
+            </button>
+            {branches.map((branch) => (
+              <button
+                key={branch.id}
+                className={String(branch.id) === String(selectedBranchId) ? "selected" : ""}
+                type="button"
+                onClick={() => onBranchSelect(branch.id, { target: "rooms", scroll: false })}
+              >
+                <span>{branch.nav_name || branch.name}</span>
+                {branch.address ? <small>{branch.address}</small> : null}
+              </button>
+            ))}
+          </div>
+        </div>
+        <button className={publicPage === "rooms" && !selectedBranchId ? "nav-link-btn active" : "nav-link-btn"} type="button" onClick={() => onShowRooms(null)}>
+          Tất cả phòng
+        </button>
+      </nav>
+      <div className="header-actions">
+        <button className="nav-search-btn" type="button" onClick={onShowBooking} aria-label="Tìm kiếm phòng">
+          <Search size={18} />
+        </button>
         {user ? (
           <button className="nav-auth-btn" type="button" onClick={onLogout}>
             <UserRound size={15} />
@@ -34,8 +68,8 @@ function Header({ branches, selectedBranchId, user, onBranchSelect, onLoginClick
             Đăng nhập
           </button>
         )}
-        <a className="nav-cta" href="#booking">Đặt phòng ngay!</a>
-      </nav>
+        <button className="nav-cta" type="button" onClick={onShowBooking}>Đặt phòng ngay <ArrowRight size={16} /></button>
+      </div>
     </header>
   );
 }

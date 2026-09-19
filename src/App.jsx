@@ -51,6 +51,7 @@ import BrandLogo from "./components/layout/BrandLogo";
 import HeroSection from "./components/home/HeroSection";
 import IntroSection from "./components/home/IntroSection";
 import RoomsSection from "./components/home/RoomsSection";
+import RoomsListPage from "./components/rooms/RoomsListPage";
 import { API_BASE_URL, SOCKET_BASE_URL } from "./config/appConfig";
 import { adminResources, booleanFields, fieldLabels, imageFields, numberFields, textareaFields } from "./data/adminConfig";
 import { bookingSlots } from "./data/homeContent";
@@ -61,6 +62,15 @@ import { assetUrl, compactMoney, money } from "./utils/format";
 function getRoomKeyFromPath() {
   const match = window.location.pathname.match(/^\/rooms\/([^/?#]+)/);
   return match ? match[1] : null;
+}
+
+function getCheckoutIdFromPath() {
+  const match = window.location.pathname.match(/^\/checkout\/([^/?#]+)/);
+  return match ? match[1] : null;
+}
+
+function getPublicPageFromPath() {
+  return window.location.pathname === "/rooms" ? "rooms" : "home";
 }
 
 function createDefaultSearch(options = bookingSlots) {
@@ -125,14 +135,35 @@ function getSearchSlotRange(search, options = bookingSlots) {
   return buildSlotDateRange(search.booking_date, slot);
 }
 
+function mapSystemRows(rows = []) {
+  return rows.reduce((result, row) => {
+    result[row.key] = String(row.content || "")
+      .replace(/FEBooking/gi, "ftft")
+      .replace(/FEBoking/gi, "ftft")
+      .replace(/\bFEB\b/g, "ftft");
+    return result;
+  }, {});
+}
+
 function App() {
   const [currentRoomId, setCurrentRoomId] = useState(getRoomKeyFromPath());
+  const [checkoutBookingId, setCheckoutBookingId] = useState(getCheckoutIdFromPath());
+  const [publicPage, setPublicPage] = useState(getPublicPageFromPath());
   const [isAdminRoute, setIsAdminRoute] = useState(window.location.pathname.startsWith("/admin"));
   const [detailRoom, setDetailRoom] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [search, setSearch] = useState(() => createEmptySearch());
   const [rooms, setRooms] = useState([]);
   const [homeRooms, setHomeRooms] = useState([]);
+  const [homeContent, setHomeContent] = useState({
+    systems: {},
+    pages: [],
+    images: [],
+    commits: [],
+    amenities: [],
+    galleries: [],
+    homestays: []
+  });
   const [branches, setBranches] = useState([]);
   const [bookingOptions, setBookingOptions] = useState(bookingSlots);
   const [selectedBranchId, setSelectedBranchId] = useState(null);
@@ -225,17 +256,20 @@ function App() {
   async function loadHomeContent() {
     try {
       const payload = await apiFetch("/home");
-      const branchNames = {
-        "pham-van-thuan-tam-hiep": "Biên Hòa",
-        "ha-huy-giap-trung-dung": "Hà Huy Giáp",
-        "chu-van-an-long-thanh": "Long Thành",
-        "111-d1-chanh-nghia": "Thủ Dầu Một",
-        "vo-thi-sau-di-an": "Dĩ An"
-      };
+      const data = payload.data || {};
       setBranches((payload.data?.branches || []).map((branch) => ({
         ...branch,
-        nav_name: branchNames[branch.slug] || branch.name
+        nav_name: branch.location || branch.name
       })));
+      setHomeContent({
+        systems: mapSystemRows(data.systems || []),
+        pages: data.pages || [],
+        images: data.images || [],
+        commits: data.commits || [],
+        amenities: data.amenities || [],
+        galleries: data.galleries || [],
+        homestays: data.homestays || []
+      });
       const nextBookingOptions = normalizeBookingOptions(payload.data?.booking_options || []);
       const defaultOptions = nextBookingOptions.length ? nextBookingOptions : bookingSlots;
       setBookingOptions(defaultOptions);
@@ -253,8 +287,10 @@ function App() {
     const nextSearch = createEmptySearch();
     setSelectedBranchId(nextBranchId);
     setSearch(nextSearch);
-    window.history.pushState({}, "", "/");
+    window.history.pushState({}, "", options.target === "rooms" ? "/rooms" : "/");
+    setPublicPage(options.target === "rooms" ? "rooms" : "home");
     setCurrentRoomId(null);
+    setCheckoutBookingId(null);
     setNotice(null);
     showHomeRooms(nextBranchId);
     if (options.scroll !== false) {
@@ -280,13 +316,57 @@ function App() {
   function openRoomDetail(room) {
     const roomKey = room.slug || room.id;
     window.history.pushState({}, "", `/rooms/${roomKey}`);
+    setPublicPage("home");
     setCurrentRoomId(String(roomKey));
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function openCheckout(bookingId) {
+    window.history.pushState({}, "", `/checkout/${bookingId}`);
+    setCheckoutBookingId(String(bookingId));
+    setCurrentRoomId(null);
+    setPublicPage("home");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function showRoomsPage(branchId = selectedBranchId) {
+    const nextBranchId = branchId ? Number(branchId) : null;
+    setSelectedBranchId(nextBranchId);
+    setSearch(createEmptySearch());
+    setNotice(null);
+    setCurrentRoomId(null);
+    setCheckoutBookingId(null);
+    setPublicPage("rooms");
+    window.history.pushState({}, "", "/rooms");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function showHome() {
+    setSelectedBranchId(null);
+    setSearch(createEmptySearch());
+    setNotice(null);
+    setCurrentRoomId(null);
+    setPublicPage("home");
+    showHomeRooms(null);
+    window.history.pushState({}, "", "/");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function scrollToBooking() {
+    if (currentRoomId || publicPage !== "home") {
+      setCurrentRoomId(null);
+      setCheckoutBookingId(null);
+      setPublicPage("home");
+      window.history.pushState({}, "", "/");
+    }
+    setTimeout(() => document.getElementById("booking")?.scrollIntoView({ behavior: "smooth" }), 0);
   }
 
   function backToHome() {
     window.history.pushState({}, "", "/");
     setCurrentRoomId(null);
+    setCheckoutBookingId(null);
+    setPublicPage("home");
     setDetailRoom(null);
     setTimeout(() => document.getElementById("rooms")?.scrollIntoView({ behavior: "smooth" }), 0);
   }
@@ -412,6 +492,8 @@ function App() {
   useEffect(() => {
     function handlePopState() {
       setCurrentRoomId(getRoomKeyFromPath());
+      setCheckoutBookingId(getCheckoutIdFromPath());
+      setPublicPage(getPublicPageFromPath());
       setIsAdminRoute(window.location.pathname.startsWith("/admin"));
     }
 
@@ -433,15 +515,22 @@ function App() {
     <div className="app-shell">
       <Header
         branches={branches}
+        publicPage={publicPage}
         selectedBranchId={selectedBranchId}
         user={authUser}
         onBranchSelect={selectBranch}
+        onHomeClick={showHome}
+        onShowRooms={showRoomsPage}
+        onShowBooking={scrollToBooking}
         onLoginClick={() => openAuth("login")}
         onLogout={logoutUser}
+        settings={homeContent.systems}
       />
 
       <main id="top">
-        {currentRoomId ? (
+        {checkoutBookingId ? (
+          <CheckoutPage bookingId={checkoutBookingId} onBack={backToHome} settings={homeContent.systems} />
+        ) : currentRoomId ? (
           <RoomDetailPage
             room={detailRoom}
             loading={detailLoading}
@@ -449,6 +538,17 @@ function App() {
             search={search}
             updateSearch={updateSearch}
             onBack={backToHome}
+            onCheckout={openCheckout}
+            settings={homeContent.systems}
+          />
+        ) : publicPage === "rooms" ? (
+          <RoomsListPage
+            branches={branches}
+            rooms={homeRooms}
+            selectedBranchId={selectedBranchId}
+            onBranchChange={(branchId) => showRoomsPage(branchId)}
+            onOpenRoomDetail={openRoomDetail}
+            onBackHome={showHome}
           />
         ) : (
         <>
@@ -461,21 +561,34 @@ function App() {
           onSearch={loadRooms}
           onBranchChange={(branchId) => selectBranch(branchId, { scroll: false })}
           onUpdateSearch={updateSearch}
+          settings={homeContent.systems}
+          images={homeContent.images}
+          commits={homeContent.commits}
         />
-        <IntroSection />
         <RoomsSection
           rooms={rooms}
           selectedBranch={branches.find((branch) => String(branch.id) === String(selectedBranchId))}
           loading={loading}
           notice={notice}
           onOpenRoomDetail={openRoomDetail}
+          onShowRooms={() => showRoomsPage(selectedBranchId)}
+          amenities={homeContent.amenities}
+        />
+        <IntroSection
+          onShowRooms={() => showRoomsPage(selectedBranchId)}
+          onShowBooking={scrollToBooking}
+          onBranchSelect={(branchId) => selectBranch(branchId, { target: "rooms", scroll: false })}
+          branches={branches}
+          settings={homeContent.systems}
+          images={homeContent.images}
+          pages={homeContent.pages}
         />
         </>
         )}
       </main>
 
       <FloatingContact />
-      <Footer />
+      <Footer branches={branches} settings={homeContent.systems} />
       {authOpen && (
         <AuthModal
           mode={authMode}
@@ -1724,7 +1837,16 @@ function AdminRoomImagePicker({ value, saving, onUpload, onRemove }) {
 }
 
 function RoomEmblaGallery({ images, title }) {
-  const safeImages = images?.length ? images : [];
+  const fallbackImages = [
+    "/assets/imgs/date-night-room.png",
+    "/assets/imgs/feboking-banner.png",
+    "/assets/imgs/feboking-cta.png",
+    "/assets/imgs/banner-home.jpg"
+  ];
+  const safeImages = [...(images?.length ? images : []), ...fallbackImages]
+    .filter(Boolean)
+    .slice(0, Math.max((images?.length || 0), 4));
+  const thumbImages = safeImages.length > 1 ? safeImages.slice(1, 4) : safeImages.slice(0, 3);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: "center",
@@ -1753,42 +1875,51 @@ function RoomEmblaGallery({ images, title }) {
   }, [safeImages.join("|"), emblaApi]);
 
   return (
-    <div className="booking-gallery embla-booking-gallery">
-      <div className="embla-gallery-viewport" ref={emblaRef}>
-        <div className="embla-gallery-container">
-          {safeImages.map((image, index) => (
-            <div className="booking-gallery-slide" key={`${image}-${index}`}>
-              <img src={image} alt={index === 0 ? title : `${title} ${index + 1}`} />
-            </div>
-          ))}
-        </div>
-      </div>
-      {safeImages.length > 1 && (
-        <>
-          <button className="embla-gallery-arrow prev" type="button" onClick={scrollPrev} aria-label="Ảnh trước">
-            <ChevronLeft size={22} />
-          </button>
-          <button className="embla-gallery-arrow next" type="button" onClick={scrollNext} aria-label="Ảnh sau">
-            <ChevronRight size={22} />
-          </button>
-          <div className="embla-gallery-dots">
+    <div className="detail-gallery-combo">
+      <div className="booking-gallery embla-booking-gallery">
+        <div className="embla-gallery-viewport" ref={emblaRef}>
+          <div className="embla-gallery-container">
             {safeImages.map((image, index) => (
-              <button
-                key={`${image}-dot-${index}`}
-                className={index === selectedIndex ? "active" : ""}
-                type="button"
-                onClick={() => scrollTo(index)}
-                aria-label={`Xem ảnh ${index + 1}`}
-              />
+              <div className="booking-gallery-slide" key={`${image}-${index}`}>
+                <img src={image} alt={index === 0 ? title : `${title} ${index + 1}`} />
+              </div>
             ))}
           </div>
-        </>
-      )}
+        </div>
+        {safeImages.length > 1 && (
+          <>
+            <button className="embla-gallery-arrow prev" type="button" onClick={scrollPrev} aria-label="Ảnh trước">
+              <ChevronLeft size={22} />
+            </button>
+            <button className="embla-gallery-arrow next" type="button" onClick={scrollNext} aria-label="Ảnh sau">
+              <ChevronRight size={22} />
+            </button>
+            <span className="gallery-counter">{selectedIndex + 1} / {safeImages.length}</span>
+          </>
+        )}
+      </div>
+      <div className="detail-gallery-thumbs">
+        {thumbImages.map((image, index) => {
+          const imageIndex = safeImages.indexOf(image);
+          return (
+          <button
+            className={imageIndex === selectedIndex ? "active" : ""}
+            type="button"
+            key={`${image}-thumb-${index}`}
+            onClick={() => scrollTo(imageIndex)}
+          >
+            <img src={image} alt={`${title} ${index + 1}`} />
+            {index === 2 ? <span>Xem tất cả ảnh</span> : null}
+          </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
 
-function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack }) {
+function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack, onCheckout, settings = {} }) {
+  const [detailBookingDate, setDetailBookingDate] = useState(defaultBookingDate());
   const [selectedSlots, setSelectedSlots] = useState([]);
   const [availabilityRows, setAvailabilityRows] = useState([]);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
@@ -1802,6 +1933,7 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack })
   const [detailSubmitting, setDetailSubmitting] = useState(false);
   const [detailNotice, setDetailNotice] = useState(null);
   const [paymentBooking, setPaymentBooking] = useState(null);
+  const siteName = settings.site_name || "ftft";
   const gallery = room?.images?.length
     ? room.images.map((image) => assetUrl(image.image_url || image.image_path))
     : [
@@ -1809,14 +1941,20 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack })
         "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=900&q=85",
         "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=900&q=85"
       ];
-  const bookingDays = upcomingBookingDays(8, search.booking_date);
+  const detailAmenities = room?.amenities?.length
+    ? room.amenities.map((amenity) => amenity.name)
+    : ["Nhà bếp hiện đại", "Netflix miễn phí", "Giường King êm ái", "Wifi tốc độ cao", "Bồn tắm thư giãn", "Không gian riêng tư"];
+  const amenityIcons = [Utensils, Film, BedDouble, Wifi, Bath, ShieldCheck, WashingMachine, Gamepad2, Projector];
+  const bookingDays = upcomingBookingDays(8);
   const firstBookingDate = bookingDays[0]?.iso;
+  const activeBookingDay = bookingDays.find((day) => day.iso === detailBookingDate) || bookingDays[0];
   const detailSlots = room?.time_slots?.length
     ? room.time_slots.map((slot) => ({
         id: String(slot.id),
         code: slot.code,
         label: slot.label,
         subLabel: slot.crosses_midnight ? "(Qua dem)" : "",
+        crossesMidnight: Boolean(slot.crosses_midnight),
         price: slot.price_amount
       }))
     : bookingSlots.map((slot) => ({ ...slot, code: slot.id }));
@@ -1838,6 +1976,27 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack })
       room_time_slot_id: Number(slotId)
     };
   });
+  const selectedSlotInfo = selectedSlots[0]
+    ? (() => {
+        const [bookingDate, slotId] = selectedSlots[0].split("|");
+        const day = bookingDays.find((item) => item.iso === bookingDate);
+        const slot = detailSlots.find((item) => item.id === slotId);
+        return { day, slot };
+      })()
+    : null;
+  const getSlotStartHour = (slot) => Number(String(slot.start || slot.label || "0").split(":")[0]);
+  const slotGroups = [
+    { label: "Buổi sáng", icon: Clock, slots: detailSlots.filter((slot) => getSlotStartHour(slot) < 12) },
+    { label: "Buổi chiều", icon: Clock, slots: detailSlots.filter((slot) => {
+      const hour = getSlotStartHour(slot);
+      return hour >= 12 && hour < 18;
+    }) },
+    { label: "Buổi tối", icon: Clock, slots: detailSlots.filter((slot) => getSlotStartHour(slot) >= 18 || slot.crossesMidnight) }
+  ].filter((group) => group.slots.length);
+  const checkoutSummary = selectedSlots.length
+    ? `${selectedSlots.length} khung giờ đã chọn`
+    : "Chưa chọn khung giờ";
+  const subtotalPreview = selectedTotal || Number(detailSlots[0]?.price || room?.price_per_hour || 0);
 
   function updateDetailForm(field, value) {
     setDetailForm((current) => ({ ...current, [field]: value }));
@@ -1913,8 +2072,9 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack })
 
       setPaymentBooking(payload.data);
       setSelectedSlots([]);
-      setDetailNotice({ type: "success", text: "Đã tạo booking. Thanh toán để giữ phòng trong 10 phút." });
+      setDetailNotice({ type: "success", text: "Đã tạo booking. Chuyển sang trang thanh toán." });
       await loadAvailability();
+      onCheckout?.(payload.data.id);
     } catch (error) {
       setDetailNotice({ type: "error", text: error.message });
     } finally {
@@ -1963,7 +2123,7 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack })
     setPaymentBooking(null);
     setAvailabilityRows([]);
     if (room?.id) loadAvailability();
-  }, [room?.id, search.booking_date]);
+  }, [room?.id, detailBookingDate]);
 
   useEffect(() => {
     const bookingId = paymentBooking?.id;
@@ -2019,98 +2179,107 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack })
 
   return (
     <section className="room-detail-page booking-detail-page">
-      <button className="back-btn detail-back-btn" type="button" onClick={onBack}><ArrowLeft size={18} /> Quay lại</button>
+      <div className="detail-breadcrumb">
+        <button className="back-btn detail-back-btn" type="button" onClick={onBack}><ArrowLeft size={18} /> Quay lại</button>
+        <span>|</span>
+        <span>{room.branch?.nav_name || room.branch?.name || "Biên Hòa"}</span>
+        <span>›</span>
+        <strong>{room.name}</strong>
+      </div>
+
+      <div className="detail-title-row">
+        <div>
+          <h1 className="booking-detail-title">{room.name}</h1>
+          <p>Không gian hiện đại, ấm cúng cho những khoảnh khắc đặc biệt.</p>
+        </div>
+        <div className="detail-title-meta">
+          <span><Star size={15} fill="currentColor" /> 4.8 (120 đánh giá)</span>
+          <span><MapPin size={15} /> {room.branch?.nav_name || room.branch?.name || siteName}</span>
+        </div>
+      </div>
 
       <div className="booking-detail-layout">
         <div className="detail-left-column">
-          <h1 className="booking-detail-title">Libra - 22</h1>
-
           <RoomEmblaGallery images={gallery} title={room.name} />
+
+          <div className="detail-amenity-strip">
+            {detailAmenities.slice(0, 6).map((name, index) => {
+              const AmenityIcon = amenityIcons[index % amenityIcons.length];
+              return <span key={name}><AmenityIcon size={23} />{name}</span>;
+            })}
+          </div>
 
           <div className="slot-booking-section">
             <div className="price-board">
-              <h2>Bảng giá</h2>
+              <h2>Bảng giá tham khảo</h2>
+              <p>Giá có thể thay đổi theo ngày và khung giờ</p>
               <div className="price-row">
-                <span><strong>{compactMoney(200000)}</strong>d/3h</span>
-                <span><strong>{compactMoney(room.price_per_night || 370000)}</strong>đ/đêm</span>
-                <span><strong>{compactMoney(580000)}</strong>đ/ngày</span>
+                <span><Clock size={24} /><strong>{compactMoney(room.price_per_hour || 200000)}</strong><small>/ 3h<br />Theo giờ</small></span>
+                <span><Clock size={24} /><strong>{compactMoney(room.price_per_night || 370000)}</strong><small>/ đêm<br />Qua đêm</small></span>
+                <span><CalendarCheck size={24} /><strong>{compactMoney(580000)}</strong><small>/ ngày<br />Cả ngày</small></span>
               </div>
             </div>
 
             <div className="slot-heading-row">
               <div>
-                <h2>Lựa chọn khung giờ dành cho bạn</h2>
-                <div className="slot-legend">
-                  <span><i className="legend-box booked" />Đã đặt</span>
+                <h2>Chọn khung giờ</h2>
+                <p>Chọn ngày và khung giờ phù hợp với lịch trình của bạn</p>
+              </div>
+              <div className="slot-legend">
                   <span><i className="legend-box available" />Còn trống</span>
                   <span><i className="legend-box selected" />Đang chọn</span>
+                  <span><i className="legend-box booked" />Đã đặt</span>
                 </div>
-              </div>
-              <button
-                className="primary-btn compact-slot-btn"
-                type="button"
-                onClick={() => document.querySelector(".detail-booking-panel")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-              >
-                {availabilityLoading ? <Loader2 className="spin" size={16} /> : null}
-                Đặt phòng
-              </button>
             </div>
 
-            <div className="slot-table-wrap">
-              <table className="slot-table">
-                <thead>
-                  <tr>
-                    <th colSpan="2">Chi nhánh</th>
-                    <th colSpan={detailSlots.length}>{room.branch?.address || "134/35 Đường Hà Huy Giáp, Phường Trung Dũng, Biên Hòa, Đồng Nai"}</th>
-                  </tr>
-                  <tr>
-                    <th colSpan="2">Tên phòng</th>
-                    <th colSpan={detailSlots.length}>Libra 22</th>
-                  </tr>
-                  <tr>
-                    <th>Thứ</th>
-                    <th>Ngày</th>
-                    {detailSlots.map((slot) => (
-                      <th key={slot.id}>
-                        {slot.label}
-                        {slot.subLabel && <small>{slot.subLabel}</small>}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {bookingDays.map((day) => (
-                    <tr key={day.iso}>
-                      <td className={day.index === 0 ? "today-cell" : ""}>{day.label}</td>
-                      <td className={day.index === 0 ? "today-cell" : ""}>{day.dateText}</td>
-                      {detailSlots.map((slot) => {
+            <div className="date-pill-row">
+              {bookingDays.slice(0, 7).map((day) => (
+                <button
+                  className={day.iso === activeBookingDay?.iso ? "active" : ""}
+                  type="button"
+                  key={day.iso}
+                  onClick={() => setDetailBookingDate(day.iso)}
+                >
+                  <strong>{day.label}</strong>
+                  <span>{day.dateText.slice(0, 5)}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="slot-grid-panel">
+              {slotGroups.map(({ label, icon: Icon, slots }) => (
+                <div className="slot-period-row" key={label}>
+                  <div className="slot-period-label"><Icon size={24} />{label}</div>
+                  <div className="slot-choice-grid">
+                    {[activeBookingDay].filter(Boolean).map((day) =>
+                      slots.map((slot) => {
                         const key = `${day.iso}|${slot.id}`;
                         const availability = slotStatusMap.get(key);
                         const isBooked = availability && availability.status !== "available";
                         const isSelected = selectedSlots.includes(key);
                         return (
-                          <td key={key}>
-                            <button
-                              type="button"
-                              className={[
-                                "slot-cell-btn",
-                                isBooked ? "is-booked" : "",
-                                isSelected ? "is-selected" : ""
-                              ].filter(Boolean).join(" ")}
-                              disabled={isBooked}
-                              onClick={() => toggleSlot(day, slot)}
-                              aria-label={`${day.dateText} ${slot.label}`}
-                            >
-                              {isBooked && <Star className="booked-star" size={14} fill="currentColor" />}
-                            </button>
-                          </td>
+                          <button
+                            type="button"
+                            key={key}
+                            className={[
+                              "slot-choice-btn",
+                              isBooked ? "is-booked" : "",
+                              isSelected ? "is-selected" : ""
+                            ].filter(Boolean).join(" ")}
+                            disabled={isBooked}
+                            onClick={() => toggleSlot(day, slot)}
+                          >
+                            <span>{slot.label}</span>
+                            {slot.subLabel && <small>{slot.subLabel}</small>}
+                          </button>
                         );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      })
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
+
             <div className="slot-summary">
               <p>** Khách hàng được giảm thêm 5% khi book 2 khung giờ, 10% khi book 3 khung giờ</p>
               <strong>Tổng tiền tạm tính: {compactMoney(selectedTotal)} đ</strong>
@@ -2120,82 +2289,99 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack })
           <div className="room-amenity-section">
             <h2>Tiện nghi phòng</h2>
             <div className="room-amenity-list">
-              <span><Utensils size={22} />Nhà bếp hiện đại</span>
-              <span><Film size={22} />Netflix</span>
-              <span><BedDouble size={22} />Giường King</span>
-              <span><Projector size={22} />Máy chiếu</span>
-              <span><ShieldCheck size={22} />Gương toàn thân</span>
-              <span><Wifi size={22} />Wifi tốc độ cao</span>
-              <span><Bath size={22} />Bồn tắm</span>
-              <span><WashingMachine size={22} />Máy giặt tự động</span>
-              <span><Gamepad2 size={22} />Boardgames</span>
+              {detailAmenities.map((name, index) => {
+                const AmenityIcon = amenityIcons[index % amenityIcons.length];
+                return <span key={name}><AmenityIcon size={22} />{name}</span>;
+              })}
             </div>
           </div>
         </div>
 
         <aside className="detail-booking-panel">
-          <h2>Thông tin đặt phòng</h2>
-          {(detailNotice || notice) && (
-            <div className={`notice ${detailNotice?.type || notice?.type}`}>{detailNotice?.text || notice?.text}</div>
-          )}
-          <input
-            className="booking-text-input"
-            placeholder="Họ và tên"
-            value={detailForm.full_name}
-            onChange={(event) => updateDetailForm("full_name", event.target.value)}
-          />
-          <input
-            className="booking-text-input"
-            placeholder="Số điện thoại"
-            value={detailForm.phone}
-            onChange={(event) => updateDetailForm("phone", event.target.value)}
-          />
-          <p className="booking-note">* Bạn vui lòng nhập đúng số điện thoại, Home sẽ gửi thông tin check-in qua Zalo</p>
+          <div className="detail-booking-card">
+            <h2>Thông tin đặt phòng</h2>
+            {(detailNotice || notice) && (
+              <div className={`notice ${detailNotice?.type || notice?.type}`}>{detailNotice?.text || notice?.text}</div>
+            )}
 
-          <label className="booking-label">Số lượng khách</label>
-          <select
-            className="booking-text-input"
-            value={search.guests}
-            onChange={(event) => updateSearch("guests", event.target.value)}
-          >
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-          </select>
-          <p className="booking-note">* Nếu &gt; 2 khách, Home xin phép phụ thu 100k/khách ơi.</p>
-          <p className="booking-note">* Home chỉ nhận tối đa 2 khách nếu khách book ở khung giờ qua đêm.</p>
+            <label className="booking-label">Họ và tên *</label>
+            <input
+              className="booking-text-input"
+              placeholder="Nguyễn Văn A"
+              value={detailForm.full_name}
+              onChange={(event) => updateDetailForm("full_name", event.target.value)}
+            />
 
-          <label className="booking-label">Căn cước công dân</label>
-          <div className="id-upload-grid">
-            <button type="button"><ImagePlus size={30} /><span>Mặt trước</span></button>
-            <button type="button"><ImagePlus size={30} /><span>Mặt sau</span></button>
+            <label className="booking-label">Số điện thoại *</label>
+            <input
+              className="booking-text-input"
+              placeholder="0901 234 567"
+              value={detailForm.phone}
+              onChange={(event) => updateDetailForm("phone", event.target.value)}
+            />
+
+            <label className="booking-label">Số lượng khách *</label>
+            <select
+              className="booking-text-input"
+              value={search.guests}
+              onChange={(event) => updateSearch("guests", event.target.value)}
+            >
+              <option value="1">1 người</option>
+              <option value="2">2 người</option>
+              <option value="3">3 người</option>
+              <option value="4">4 người</option>
+            </select>
+
+            <label className="booking-label">Căn cước công dân <small>(tùy chọn)</small></label>
+            <div className="id-upload-grid">
+              <button type="button"><ImagePlus size={30} /><span>Mặt trước</span><small>Chọn ảnh hoặc kéo thả</small></button>
+              <button type="button"><ImagePlus size={30} /><span>Mặt sau</span><small>Chọn ảnh hoặc kéo thả</small></button>
+            </div>
+
+            <label className="booking-label">Ghi chú cho chủ nhà <small>(tùy chọn)</small></label>
+            <textarea
+              className="booking-textarea"
+              placeholder="Ví dụ: cần thêm gối, trang trí sinh nhật..."
+              value={detailForm.note}
+              onChange={(event) => updateDetailForm("note", event.target.value)}
+            />
+
+            <label className="booking-check">
+              <input
+                type="checkbox"
+                checked={detailForm.adult_confirm}
+                onChange={(event) => updateDetailForm("adult_confirm", event.target.checked)}
+              />
+              <span>Xác nhận mọi người đã đủ tuổi vị thành niên, hoặc trẻ em phải có người giám hộ.</span>
+            </label>
+            <label className="booking-check">
+              <input
+                type="checkbox"
+                checked={detailForm.return_confirm}
+                onChange={(event) => updateDetailForm("return_confirm", event.target.checked)}
+              />
+              <span>Tôi đồng ý với <b>Nội quy</b> & <b>Chính sách</b> của {siteName}.</span>
+            </label>
           </div>
-          <p className="booking-note">* Thông tin CCCD của bạn được lưu trữ và bảo mật riêng tư để khai báo lưu trú, sẽ được xóa bỏ sau khi bạn check-out.</p>
 
-          <textarea
-            className="booking-textarea"
-            placeholder="Ghi chú cho ftft"
-            value={detailForm.note}
-            onChange={(event) => updateDetailForm("note", event.target.value)}
-          />
-
-          <label className="booking-check danger-check">
-            <input
-              type="checkbox"
-              checked={detailForm.adult_confirm}
-              onChange={(event) => updateDetailForm("adult_confirm", event.target.checked)}
-            />
-            <span>Xác nhận mọi người đã đủ tuổi vị thành niên, hoặc trẻ em phải có người giám hộ. Người đặt phòng chịu trách nhiệm với thông tin này.</span>
-          </label>
-          <label className="booking-check">
-            <input
-              type="checkbox"
-              checked={detailForm.return_confirm}
-              onChange={(event) => updateDetailForm("return_confirm", event.target.checked)}
-            />
-            <span>Sau khi quét mã thanh toán thành công, bạn hãy quay lại đây để chụp thông tin Booking.</span>
-          </label>
+          <div className="detail-payment-card">
+            <h2>Thông tin thanh toán</h2>
+            <dl>
+              <div><dt>Phòng</dt><dd>{room.name}</dd></div>
+              <div><dt>Ngày đặt</dt><dd>{selectedSlotInfo?.day?.dateText || "Chưa chọn"}</dd></div>
+              <div><dt>Khung giờ</dt><dd>{selectedSlotInfo?.slot?.label || checkoutSummary}</dd></div>
+              <div><dt>Số lượng khách</dt><dd>{search.guests} người</dd></div>
+            </dl>
+            <div className="detail-payment-total">
+              <span>Tổng tiền tạm tính</span>
+              <strong>{compactMoney(subtotalPreview)}đ</strong>
+            </div>
+            <button className="primary-btn full detail-submit-btn" type="button" onClick={submitDetailBooking} disabled={detailSubmitting}>
+              {detailSubmitting ? <Loader2 className="spin" size={17} /> : <CalendarCheck size={17} />}
+              Đặt phòng ngay
+            </button>
+            <p><ShieldCheck size={14} /> Không thu phí ngay · Xác nhận nhanh chóng</p>
+          </div>
 
           {paymentBooking?.payment && (
             <div className="vietqr-card">
@@ -2236,18 +2422,170 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack })
             </div>
           )}
 
-          <p className="policy-copy">Khi bấm Đặt phòng đồng nghĩa với việc bạn đã đọc và đồng ý với các <b>Nội quy</b> & <b>Chính sách</b> của ftft</p>
-
-          <div className="booking-warning">
-            <b>*Chú ý:</b><br />
-            - Bạn đang đặt phòng tại: Home - Bến Ninh Kiều, Cần Thơ.<br />
-            - Đây là hệ thống đặt phòng tự động, nên khi bấm Đặt phòng bạn sẽ được chuyển sang quét mã QR để thanh toán qua app ngân hàng.
+          <div className="detail-help-card">
+            <h3>Cần hỗ trợ?</h3>
+            <p>Liên hệ với chúng tôi qua Zalo hoặc hotline để được tư vấn nhanh nhất.</p>
+            <div>
+              <a href="https://zalo.me" target="_blank" rel="noreferrer">Nhắn Zalo</a>
+              <a href="tel:0901234567">0901 234 567</a>
+            </div>
           </div>
 
-          <button className="primary-btn full detail-submit-btn" type="button" onClick={submitDetailBooking} disabled={detailSubmitting}>
-            {detailSubmitting ? <Loader2 className="spin" size={17} /> : <CalendarCheck size={17} />}
-            Đặt phòng và lấy QR
-          </button>
+          <div className="detail-offer-card">
+            <strong>Ưu đãi đặc biệt</strong>
+            <span>Khách hàng đặt từ 2 khung giờ trở lên được giảm thêm 5% tổng tiền.</span>
+          </div>
+        </aside>
+      </div>
+    </section>
+  );
+}
+
+function CheckoutPage({ bookingId, onBack, settings = {} }) {
+  const [checkout, setCheckout] = useState(null);
+  const [method, setMethod] = useState("momo");
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [checkoutNotice, setCheckoutNotice] = useState(null);
+  const siteName = settings.site_name || "ftft";
+
+  const payment = checkout?.payment;
+  const slotsText = checkout?.slots?.length
+    ? checkout.slots.map((slot) => slot.label || `${String(slot.start_time).slice(0, 5)} - ${String(slot.end_time).slice(0, 5)}`).join(", ")
+    : "Chưa có khung giờ";
+
+  async function loadCheckout(silent = false) {
+    if (!silent) setLoading(true);
+    try {
+      const payload = await apiFetch(`/bookings/${bookingId}/payment`);
+      setCheckout(payload.data);
+      if (payload.data?.payment?.provider) setMethod(payload.data.payment.provider);
+    } catch (error) {
+      setCheckoutNotice({ type: "error", text: error.message });
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  }
+
+  async function createPayment() {
+    setCreating(true);
+    setCheckoutNotice(null);
+    try {
+      const payload = await apiFetch(`/bookings/${bookingId}/payment`, {
+        method: "POST",
+        body: JSON.stringify({ provider: method })
+      });
+      setCheckout(payload.data);
+      setCheckoutNotice({ type: "success", text: "Đã tạo thông tin thanh toán. Hoàn tất trong 10 phút để giữ phòng." });
+    } catch (error) {
+      setCheckoutNotice({ type: "error", text: error.message });
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  function copyPaymentContent() {
+    const content = payment?.transfer_content || checkout?.booking_code;
+    if (!content) return;
+    navigator.clipboard?.writeText(content);
+    setCheckoutNotice({ type: "success", text: "Đã copy nội dung thanh toán." });
+  }
+
+  useEffect(() => {
+    loadCheckout();
+  }, [bookingId]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      loadCheckout(true);
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [bookingId]);
+
+  if (loading) {
+    return (
+      <section className="checkout-page">
+        <div className="empty-state"><Loader2 className="spin" size={22} /> Đang tải trang thanh toán...</div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="checkout-page">
+      <button className="back-btn" type="button" onClick={onBack}><ArrowLeft size={18} /> Về trang chủ</button>
+      <div className="checkout-layout">
+        <div className="checkout-main-card">
+          <p className="section-kicker">Thanh toán</p>
+          <h1>Chọn phương thức thanh toán</h1>
+          <p>Booking #{checkout?.booking_code}. Hệ thống đang giữ phòng trong 10 phút.</p>
+
+          {checkoutNotice && <div className={`notice ${checkoutNotice.type}`}>{checkoutNotice.text}</div>}
+
+          <div className="payment-method-grid">
+            <button className={method === "momo" ? "active" : ""} type="button" onClick={() => setMethod("momo")} disabled={Boolean(payment)}>
+              <CreditCard size={24} />
+              <strong>MoMo</strong>
+              <span>Mở cổng thanh toán MoMo</span>
+            </button>
+            <button className={method === "vietqr" ? "active" : ""} type="button" onClick={() => setMethod("vietqr")} disabled={Boolean(payment)}>
+              <CreditCard size={24} />
+              <strong>VietQR</strong>
+              <span>Quét QR chuyển khoản ngân hàng</span>
+            </button>
+          </div>
+
+          {!payment ? (
+            <button className="primary-btn checkout-create-btn" type="button" onClick={createPayment} disabled={creating}>
+              {creating ? <Loader2 className="spin" size={18} /> : <CreditCard size={18} />}
+              Tiếp tục thanh toán
+            </button>
+          ) : (
+            <div className="checkout-payment-box">
+              <h2>{payment.provider === "momo" ? "Thanh toán MoMo" : "Thanh toán VietQR"}</h2>
+              {payment.qr_url ? (
+                <img src={payment.qr_url} alt="Mã thanh toán" />
+              ) : (
+                <div className="momo-empty-qr">
+                  <CreditCard size={34} />
+                  <span>MoMo không trả ảnh QR trong response này.</span>
+                  <strong>Bấm nút bên dưới để mở trang thanh toán MoMo.</strong>
+                </div>
+              )}
+              <div className="vietqr-row">
+                <span>Số tiền</span>
+                <strong>{money(payment.amount || checkout.total_amount)}</strong>
+              </div>
+              <div className="vietqr-row">
+                <span>{payment.provider === "momo" ? "Mã đơn" : "Nội dung"}</span>
+                <button type="button" onClick={copyPaymentContent}>
+                  {payment.transfer_content || checkout.booking_code} <Copy size={14} />
+                </button>
+              </div>
+              {payment.raw_payload?.response?.payUrl && (
+                <a className="primary-btn full momo-pay-btn" href={payment.raw_payload.response.payUrl} target="_blank" rel="noreferrer">
+                  Mở MoMo để thanh toán
+                </a>
+              )}
+              <button className="ghost-btn vietqr-refresh-btn" type="button" onClick={() => loadCheckout(true)}>
+                <RefreshCw size={14} />
+                Kiểm tra thanh toán
+              </button>
+            </div>
+          )}
+        </div>
+
+        <aside className="checkout-summary-card">
+          <h2>Thông tin booking</h2>
+          <dl>
+            <div><dt>Phòng</dt><dd>{checkout?.room?.name || "Phòng đã chọn"}</dd></div>
+            <div><dt>Chi nhánh</dt><dd>{checkout?.branch?.name || siteName}</dd></div>
+            <div><dt>Khung giờ</dt><dd>{slotsText}</dd></div>
+            <div><dt>Trạng thái</dt><dd>{checkout?.status || "pending_payment"}</dd></div>
+          </dl>
+          <div className="detail-payment-total">
+            <span>Tổng tiền</span>
+            <strong>{money(checkout?.total_amount || 0)}</strong>
+          </div>
         </aside>
       </div>
     </section>

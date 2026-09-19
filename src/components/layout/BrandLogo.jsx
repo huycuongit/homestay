@@ -1,10 +1,13 @@
-const LOGO_SRC = "/assets/imgs/logo.png";
+function BrandLogo({ className = "", showText = false, label = "ftft" }) {
+  const brandName = String(label || "ftft")
+    .replace(/FEBooking/gi, "ftft")
+    .replace(/FEBoking/gi, "ftft")
+    .replace(/\bFEB\b/g, "ftft");
 
-function BrandLogo({ className = "", showText = true, label = "ftft" }) {
   return (
     <span className={`brand-logo ${className}`.trim()}>
-      <img src={LOGO_SRC} alt={label} />
-      {showText && <strong>{label}</strong>}
+      <span className="brand-logo-mark" aria-hidden="true">ft</span>
+      <strong>{showText ? brandName : brandName}</strong>
     </span>
   );
 }

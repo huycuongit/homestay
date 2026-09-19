@@ -21,6 +21,83 @@ export const heroShots = [
   }
 ];
 
+export const experienceMoods = [
+  {
+    title: "Movie Night",
+    text: "Máy chiếu · Netflix · Sofa",
+    image: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600&q=85"
+  },
+  {
+    title: "Bath & Chill",
+    text: "Bồn tắm · Nến thơm · Thư giãn",
+    image: "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=600&q=85"
+  },
+  {
+    title: "Game Date",
+    text: "PS5 · Boardgame · Giải trí",
+    image: "https://images.unsplash.com/photo-1605901309584-818e25960a8f?auto=format&fit=crop&w=600&q=85"
+  },
+  {
+    title: "Cook Together",
+    text: "Bếp riêng · Bàn ăn · Ấm cúng",
+    image: "https://images.unsplash.com/photo-1556911220-bff31c812dba?auto=format&fit=crop&w=600&q=85"
+  },
+  {
+    title: "Overnight",
+    text: "Giường lớn · Check-out muộn",
+    image: "https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=600&q=85"
+  }
+];
+
+export const experienceSteps = [
+  {
+    time: "18:00",
+    title: "Check-in nhanh",
+    text: "Nhận phòng dễ dàng, không cần chờ đợi.",
+    image: "https://images.unsplash.com/photo-1554995207-c18c203602cb?auto=format&fit=crop&w=600&q=85",
+    icon: "key"
+  },
+  {
+    time: "18:15",
+    title: "Chill một chút",
+    text: "Bật playlist, gọi đồ ăn, ngả lưng trên sofa.",
+    image: "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=600&q=85",
+    icon: "sofa"
+  },
+  {
+    time: "19:30",
+    title: "Movie Night",
+    text: "Netflix + máy chiếu, chọn một bộ phim cả hai thích.",
+    image: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600&q=85",
+    icon: "movie"
+  },
+  {
+    time: "22:00",
+    title: "Chẳng cần vội",
+    text: "Muốn ở thêm? Gia hạn ngay trên ftft.",
+    image: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=600&q=85",
+    icon: "moon"
+  }
+];
+
+export const branchHighlights = [
+  {
+    name: "Biên Hòa",
+    text: "12+ phòng · Cách trung tâm 5 phút",
+    image: "https://images.unsplash.com/photo-1600585154363-67eb9e2e2099?auto=format&fit=crop&w=500&q=85"
+  },
+  {
+    name: "Dĩ An",
+    text: "8+ phòng · Cách trung tâm 10 phút",
+    image: "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=500&q=85"
+  },
+  {
+    name: "Thủ Đức",
+    text: "6+ phòng · Cách trung tâm 15 phút",
+    image: "https://images.unsplash.com/photo-1616046229478-9901c5536a45?auto=format&fit=crop&w=500&q=85"
+  }
+];
+
 export const featureList = [
   "Nội thất hiện đại, đầy đủ tiện ích",
   "Máy chiếu + Netflix FREE, chill hết đêm",

@@ -1,9 +1,28 @@
-import { CalendarDays, Clock, Loader2, MapPin, Search, Users } from "lucide-react";
+import { Bath, CalendarDays, Clock, Heart, Loader2, MapPin, Projector, Search, ShieldCheck, Soup, Users } from "lucide-react";
 import { bookingSlots as fallbackBookingSlots, heroShots } from "../../data/homeContent";
-import BrandLogo from "../layout/BrandLogo";
+import { assetUrl } from "../../utils/format";
 
-function HeroSection({ branches, bookingOptions = [], selectedBranchId, search, loading, onSearch, onBranchChange, onUpdateSearch }) {
+const heroFeatures = [
+  { icon: ShieldCheck, title: "Không gian riêng tư", text: "Thoải mái, an toàn" },
+  { icon: Projector, title: "Máy chiếu & Netflix", text: "Xem phim thỏa thích" },
+  { icon: Bath, title: "Bồn tắm thư giãn", text: "Giảm căng thẳng" },
+  { icon: Soup, title: "Bếp tiện nghi", text: "Nấu ăn cùng nhau" },
+  { icon: MapPin, title: "Nhiều chi nhánh", text: "Ngay trong nội thành" },
+  { icon: Heart, title: "Được các cặp đôi yêu thích", text: "Hơn 10.000 lượt đặt phòng" }
+];
+
+function HeroSection({ branches, bookingOptions = [], selectedBranchId, search, loading, onSearch, onBranchChange, onUpdateSearch, settings = {}, images = [], commits = [] }) {
   const slots = bookingOptions.length ? bookingOptions : fallbackBookingSlots;
+  const dynamicShots = images.length
+    ? images.slice(0, 5).map((image) => ({ label: image.name || image.description || "Ảnh trải nghiệm", src: assetUrl(image.url) }))
+    : heroShots;
+  const dynamicFeatures = commits.length
+    ? commits.slice(0, 6).map((commit, index) => ({
+        icon: [ShieldCheck, Projector, Bath, Soup, MapPin, Heart][index % 6],
+        title: commit.name,
+        text: commit.description
+      }))
+    : heroFeatures;
   const visibleSlots = slots.filter((slot) => slot.type === search.booking_type);
   const rateOptions = slots.reduce((result, slot) => {
     if (!result.some((item) => item.value === slot.type)) {
@@ -16,24 +35,18 @@ function HeroSection({ branches, bookingOptions = [], selectedBranchId, search, 
     <section className="hero" id="booking">
       <div className="hero-stage">
         <div className="hero-backdrop">
-          <div className="hero-brand">
-            <BrandLogo className="hero-logo" showText={false} />
-            <h1>ftft HOMESTAY & CINEMA</h1>
-            <p>CHILL OUT & MOVIE ON</p>
+          <div className="hero-copy">
+            <p className="hero-kicker">{settings.hero_kicker || settings.site_name || "ftft"}</p>
+            <h1>{settings.hero_title || "Một khoảng riêng,"}<br /><span>{settings.hero_title_highlight || "ngay gần bạn."}</span></h1>
+            <p className="hero-subtitle">
+              {settings.hero_subtitle || "Homestay, căn hộ riêng tư dành cho những buổi hẹn, staycation và những ngày chỉ muốn ở cạnh nhau."}
+            </p>
           </div>
 
-          <div className="callout callout-left">
-            <span>view ban công<br />ngắm hoàng hôn</span>
-          </div>
-          <div className="callout callout-center">
-            <span>máy chiếu full HD<br />120 inches</span>
-          </div>
-          <div className="callout callout-right">
-            <span>thỏa sức chill<br />cùng boardgames</span>
-          </div>
-
-          <div className="hero-shot-strip" aria-label="Ảnh nổi bật">
-            {heroShots.map((shot) => (
+          <div className="hero-note hero-note-left handwriting">{settings.hero_note_left || "Good things\nhappen here ♡"}</div>
+          <div className="hero-note hero-note-right handwriting">{settings.hero_note_right || "Same place\ndifferent feelings ♡"}</div>
+          <div className="hero-shot-strip" aria-label="Ảnh trải nghiệm nổi bật">
+            {dynamicShots.map((shot) => (
               <figure className="hero-shot" key={shot.label}>
                 <img src={shot.src} alt={shot.label} />
               </figure>
@@ -43,13 +56,13 @@ function HeroSection({ branches, bookingOptions = [], selectedBranchId, search, 
 
         <form className="search-panel" onSubmit={onSearch}>
           <div className="field location-field">
-            <label htmlFor="location"><MapPin size={15} /> Địa điểm</label>
+            <label htmlFor="location"><MapPin size={18} /> Khu vực</label>
             <select
               id="location"
               value={selectedBranchId || ""}
               onChange={(event) => onBranchChange(event.target.value || null)}
             >
-              <option value="">Chọn chi nhánh</option>
+              <option value="">Chọn khu vực</option>
               {branches.map((branch) => (
                 <option key={branch.id} value={branch.id}>
                   {branch.nav_name || branch.name}
@@ -59,14 +72,14 @@ function HeroSection({ branches, bookingOptions = [], selectedBranchId, search, 
           </div>
 
           <div className="field">
-            <label htmlFor="booking_type"><Clock size={15} /> Loại đặt</label>
+            <label htmlFor="booking_type"><Clock size={18} /> Loại phòng</label>
             <select
               id="booking_type"
               value={search.booking_type}
               onChange={(event) => onUpdateSearch("booking_type", event.target.value)}
               disabled={!selectedBranchId}
             >
-              <option value="">Chọn loại đặt</option>
+              <option value="">Tất cả</option>
               {rateOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -76,7 +89,7 @@ function HeroSection({ branches, bookingOptions = [], selectedBranchId, search, 
           </div>
 
           <div className="field">
-            <label htmlFor="booking_date"><CalendarDays size={15} /> Ngày</label>
+            <label htmlFor="booking_date"><CalendarDays size={18} /> Ngày</label>
             <input
               id="booking_date"
               type="date"
@@ -87,7 +100,7 @@ function HeroSection({ branches, bookingOptions = [], selectedBranchId, search, 
           </div>
 
           <div className="field">
-            <label htmlFor="slot_id"><Clock size={15} /> Khung giờ</label>
+            <label htmlFor="slot_id"><Clock size={18} /> Khung giờ</label>
             <select
               id="slot_id"
               value={search.slot_id}
@@ -104,7 +117,7 @@ function HeroSection({ branches, bookingOptions = [], selectedBranchId, search, 
           </div>
 
           <div className="field">
-            <label htmlFor="guests">Số khách</label>
+            <label htmlFor="guests"><Users size={18} /> Khách</label>
             <div className="guest-control">
               <Users size={17} />
               <input
@@ -124,6 +137,15 @@ function HeroSection({ branches, bookingOptions = [], selectedBranchId, search, 
             Tìm phòng
           </button>
         </form>
+      </div>
+      <div className="hero-feature-row">
+        {dynamicFeatures.map(({ icon: Icon, title, text }) => (
+          <div className="hero-feature" key={title}>
+            <Icon size={30} />
+            <strong>{title}</strong>
+            <span>{text}</span>
+          </div>
+        ))}
       </div>
     </section>
   );
