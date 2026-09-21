@@ -7,7 +7,9 @@ function Header({
   selectedBranchId,
   user,
   onBranchSelect,
+  onShowBranches,
   onHomeClick,
+  onShowRooms,
   onShowBooking,
   onLoginClick,
   onLogout,
@@ -25,8 +27,8 @@ function Header({
           Trang chủ
         </button>
         <div className="nav-dropdown">
-          <button className={selectedBranchId ? "nav-link-btn active" : "nav-link-btn"} type="button">
-            Chi nhánh
+          <button className={publicPage === "rooms" ? "nav-link-btn active" : "nav-link-btn"} type="button" onClick={() => onShowRooms(null)}>
+            Phòng
             <ChevronDown size={14} />
           </button>
           <div className="nav-dropdown-menu" role="menu">
@@ -46,6 +48,9 @@ function Header({
             ))}
           </div>
         </div>
+        <button className={publicPage === "branches" ? "nav-link-btn active" : "nav-link-btn"} type="button" onClick={onShowBranches}>
+          Chi nhánh
+        </button>
       </nav>
       <div className="header-actions">
         <button className="nav-search-btn" type="button" onClick={onShowBooking} aria-label="Tìm kiếm phòng">

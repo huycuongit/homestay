@@ -9,7 +9,7 @@ const stepIcons = {
   moon: Moon
 };
 
-function IntroSection({ branches = [], onShowRooms, onShowBooking, onBranchSelect, settings = {}, images = [], pages = [] }) {
+function IntroSection({ branches = [], onShowRooms, onShowBooking, onBranchSelect, onShowBranches, settings = {}, images = [], pages = [] }) {
   const siteName = settings.site_name || "FEBoking";
   const imagePool = images.length ? images.map((image) => assetUrl(image.url)) : [];
   const pageMoods = pages.filter((page) => String(page.key || page.slug || "").startsWith("mood_"));
@@ -90,7 +90,7 @@ function IntroSection({ branches = [], onShowRooms, onShowBooking, onBranchSelec
             <p className="section-kicker">Hệ thống chi nhánh</p>
             <h2>{settings.branches_title || "Luôn có một điểm đến gần bạn"}</h2>
           </div>
-          <button className="link-action" type="button" onClick={onShowRooms}>Xem bản đồ <ArrowRight size={16} /></button>
+          <button className="link-action" type="button" onClick={onShowBranches}>Xem bản đồ <ArrowRight size={16} /></button>
         </div>
         <div className="branch-highlight-grid">
           {visibleBranches.map((branch) => (

@@ -2,7 +2,7 @@ import { useState } from "react";
 import BrandLogo from "./BrandLogo";
 import { ArrowRight, Instagram, Music2, Youtube } from "lucide-react";
 
-function Footer({ branches = [], settings = {} }) {
+function Footer({ branches = [], settings = {}, onShowBranches }) {
   const visibleBranches = branches.slice(0, 5);
   const siteName = settings.site_name || "FEBoking";
   const footerIntro = settings.footer_intro || "Nền tảng đặt phòng homestay cho những khoảnh khắc đặc biệt.";
@@ -51,7 +51,7 @@ function Footer({ branches = [], settings = {} }) {
               <span>{siteName}</span>
               <small>{visibleBranches.length ? `${visibleBranches.length} chi nhánh đang hoạt động tại Đồng Nai và Bình Dương` : "Hệ thống chi nhánh FEBoking"}</small>
             </div>
-            <a className="footer-link" href="#branches">Xem hệ thống chi nhánh</a>
+            <button className="footer-link footer-link-button" type="button" onClick={onShowBranches}>Xem hệ thống chi nhánh</button>
           </div>
 
           <div className="footer-newsletter">

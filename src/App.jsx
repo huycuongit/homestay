@@ -51,6 +51,7 @@ import Header from "./components/layout/Header";
 import BrandLogo from "./components/layout/BrandLogo";
 import HeroSection from "./components/home/HeroSection";
 import IntroSection from "./components/home/IntroSection";
+import BranchesPage from "./components/branches/BranchesPage";
 import RoomsSection from "./components/home/RoomsSection";
 import RoomsListPage from "./components/rooms/RoomsListPage";
 import { API_BASE_URL, SOCKET_BASE_URL } from "./config/appConfig";
@@ -71,7 +72,9 @@ function getCheckoutIdFromPath() {
 }
 
 function getPublicPageFromPath() {
-  return window.location.pathname === "/rooms" ? "rooms" : "home";
+  if (window.location.pathname === "/rooms") return "rooms";
+  if (window.location.pathname === "/branches") return "branches";
+  return "home";
 }
 
 function createDefaultSearch(options = bookingSlots) {
@@ -350,6 +353,15 @@ function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function showBranchesPage() {
+    setCurrentRoomId(null);
+    setCheckoutBookingId(null);
+    setPublicPage("branches");
+    setNotice(null);
+    window.history.pushState({}, "", "/branches");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function showHome() {
     setSelectedBranchId(null);
     setSearch(createEmptySearch());
@@ -530,7 +542,9 @@ function App() {
         selectedBranchId={selectedBranchId}
         user={authUser}
         onBranchSelect={selectBranch}
+        onShowBranches={showBranchesPage}
         onHomeClick={showHome}
+        onShowRooms={showRoomsPage}
         onShowBooking={scrollToBooking}
         onLoginClick={() => openAuth("login")}
         onLogout={logoutUser}
@@ -559,6 +573,12 @@ function App() {
             onBranchChange={(branchId) => showRoomsPage(branchId)}
             onOpenRoomDetail={openRoomDetail}
             onBackHome={showHome}
+          />
+        ) : publicPage === "branches" ? (
+          <BranchesPage
+            branches={branches}
+            onBackHome={showHome}
+            onBrowseRooms={(branchId) => showRoomsPage(branchId)}
           />
         ) : (
         <>
@@ -591,6 +611,7 @@ function App() {
           onShowRooms={() => showRoomsPage(selectedBranchId)}
           onShowBooking={scrollToBooking}
           onBranchSelect={(branchId) => selectBranch(branchId, { target: "rooms", scroll: false })}
+          onShowBranches={showBranchesPage}
           branches={branches}
           settings={homeContent.systems}
           images={homeContent.images}
@@ -601,7 +622,7 @@ function App() {
       </main>
 
       <FloatingContact />
-      <Footer branches={branches} settings={homeContent.systems} />
+      <Footer branches={branches} settings={homeContent.systems} onShowBranches={showBranchesPage} />
       {authOpen && (
         <AuthModal
           mode={authMode}
