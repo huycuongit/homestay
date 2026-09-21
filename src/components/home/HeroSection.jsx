@@ -133,8 +133,8 @@ function HeroSection({ branches, bookingOptions = [], selectedBranchId, search, 
         </form>
       </div>
       <div className="hero-feature-row">
-        {dynamicFeatures.map(({ icon: Icon, title, text }) => (
-          <div className="hero-feature" key={title}>
+        {dynamicFeatures.map(({ icon: Icon, title, text }, index) => (
+          <div className="hero-feature" key={`${title}-${index}`}>
             <Icon size={30} />
             <strong>{title}</strong>
             <span>{text}</span>

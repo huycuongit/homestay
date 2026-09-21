@@ -4,6 +4,7 @@ import useEmblaCarousel from "embla-carousel-react";
 import toast, { Toaster } from "react-hot-toast";
 import {
   ArrowLeft,
+  ArrowRight,
   ArrowUp,
   Bath,
   BedDouble,
@@ -355,6 +356,7 @@ function App() {
     setNotice(null);
     setHasRoomSearch(false);
     setCurrentRoomId(null);
+    setCheckoutBookingId(null);
     setPublicPage("home");
     showHomeRooms(null);
     window.history.pushState({}, "", "/");
@@ -2461,9 +2463,15 @@ function CheckoutPage({ bookingId, onBack, settings = {} }) {
   const siteName = settings.site_name || "FEBoking";
 
   const payment = checkout?.payment;
+  const isPayable = ["pending_payment", "pending"].includes(checkout?.status);
   const slotsText = checkout?.slots?.length
     ? checkout.slots.map((slot) => slot.label || `${String(slot.start_time).slice(0, 5)} - ${String(slot.end_time).slice(0, 5)}`).join(", ")
     : "Chưa có khung giờ";
+  const bookingDate = checkout?.slots?.[0]?.booking_date;
+  const bookingDateText = bookingDate
+    ? new Intl.DateTimeFormat("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(`${String(bookingDate).slice(0, 10)}T00:00:00`))
+    : "Chưa chọn ngày";
+  const roomImage = assetUrl(checkout?.room?.main_image || `/assets/imgs/room-0${((Number(checkout?.room?.id || 1) - 1) % 4) + 1}.png`);
 
   async function loadCheckout(silent = false) {
     if (!silent) setLoading(true);
@@ -2479,16 +2487,29 @@ function CheckoutPage({ bookingId, onBack, settings = {} }) {
   }
 
   async function createPayment() {
+    if (!isPayable) {
+      setCheckoutNotice({ type: "error", text: "Phiên giữ phòng đã hết hạn. Vui lòng chọn lại khung giờ để tạo booking mới." });
+      return;
+    }
     setCreating(true);
     setCheckoutNotice(null);
+    const paymentWindow = method === "momo" ? window.open("about:blank", "_blank") : null;
     try {
       const payload = await apiFetch(`/bookings/${bookingId}/payment`, {
         method: "POST",
         body: JSON.stringify({ provider: method })
       });
       setCheckout(payload.data);
+      const momoPayUrl = payload.data?.payment?.raw_payload?.response?.payUrl;
+      if (method === "momo" && momoPayUrl) {
+        if (paymentWindow) paymentWindow.location.replace(momoPayUrl);
+        else window.location.assign(momoPayUrl);
+        return;
+      }
+      paymentWindow?.close();
       setCheckoutNotice({ type: "success", text: "Đã tạo thông tin thanh toán. Hoàn tất trong 10 phút để giữ phòng." });
     } catch (error) {
+      paymentWindow?.close();
       setCheckoutNotice({ type: "error", text: error.message });
     } finally {
       setCreating(false);
@@ -2523,33 +2544,56 @@ function CheckoutPage({ bookingId, onBack, settings = {} }) {
 
   return (
     <section className="checkout-page">
-      <button className="back-btn" type="button" onClick={onBack}><ArrowLeft size={18} /> Về trang chủ</button>
+      <div className="checkout-handwritten-note handwriting" aria-hidden="true">
+        <span>Good stays,</span>
+        <span>better days</span>
+        <i>♡</i>
+      </div>
+      <div className="checkout-heading">
+        <button className="back-btn" type="button" onClick={onBack}><ArrowLeft size={18} /> Về trang chủ</button>
+        <p className="section-kicker">Thanh toán</p>
+        <h1>Thanh toán đặt phòng</h1>
+        <p>Hoàn tất bước cuối để giữ phòng của bạn. Hệ thống sẽ tự động giữ phòng trong 10 phút.</p>
+      </div>
       <div className="checkout-layout">
         <div className="checkout-main-card">
-          <p className="section-kicker">Thanh toán</p>
-          <h1>Chọn phương thức thanh toán</h1>
-          <p>Booking #{checkout?.booking_code}. Hệ thống đang giữ phòng trong 10 phút.</p>
+          <div className="checkout-card-heading">
+            <h2><CreditCard size={23} /> Chọn phương thức thanh toán</h2>
+            <span><ShieldCheck size={17} /> Thanh toán an toàn</span>
+          </div>
 
           {checkoutNotice && <div className={`notice ${checkoutNotice.type}`}>{checkoutNotice.text}</div>}
 
           <div className="payment-method-grid">
             <button className={method === "momo" ? "active" : ""} type="button" onClick={() => setMethod("momo")} disabled={Boolean(payment)}>
-              <CreditCard size={24} />
-              <strong>MoMo</strong>
-              <span>Mở cổng thanh toán MoMo</span>
+              <span className="payment-radio" aria-hidden="true" />
+              <span className="momo-mark">mo<br />mo</span>
+              <span className="payment-method-copy"><strong>Ví MoMo <em>Phổ biến</em></strong><small>Thanh toán nhanh chóng, an toàn, tiện lợi.</small></span>
+              <ChevronRight className="payment-chevron" size={22} />
             </button>
             <button className={method === "vietqr" ? "active" : ""} type="button" onClick={() => setMethod("vietqr")} disabled={Boolean(payment)}>
-              <CreditCard size={24} />
-              <strong>VietQR</strong>
-              <span>Quét QR chuyển khoản ngân hàng</span>
+              <span className="payment-radio" aria-hidden="true" />
+              <span className="vietqr-mark">Viet<span>QR</span></span>
+              <span className="payment-method-copy"><strong>VietQR</strong><small>Quét mã QR chuyển khoản ngân hàng.</small></span>
+              <ChevronRight className="payment-chevron" size={22} />
             </button>
           </div>
 
+          {!payment && <div className="checkout-assurances">
+            <span><ShieldCheck size={24} /><b>Thanh toán an toàn</b><small>Mã hóa thông tin</small></span>
+            <span><Clock size={24} /><b>Giữ phòng 10 phút</b><small>Sau khi thanh toán</small></span>
+            <span><CheckCircle2 size={24} /><b>Xác nhận tức thì</b><small>Nhận thông báo ngay</small></span>
+          </div>}
+
           {!payment ? (
-            <button className="primary-btn checkout-create-btn" type="button" onClick={createPayment} disabled={creating}>
-              {creating ? <Loader2 className="spin" size={18} /> : <CreditCard size={18} />}
-              Tiếp tục thanh toán
+            <>
+            <button className="primary-btn checkout-create-btn" type="button" onClick={createPayment} disabled={creating || !isPayable}>
+              {creating ? <Loader2 className="spin" size={18} /> : <ShieldCheck size={18} />}
+              {isPayable ? "Tiếp tục thanh toán" : "Phiên giữ phòng đã hết hạn"}
+              <ArrowRight size={18} />
             </button>
+            {!isPayable && <button className="ghost-btn checkout-reselect-btn" type="button" onClick={onBack}>Chọn lại phòng</button>}
+            </>
           ) : (
             <div className="checkout-payment-box">
               <h2>{payment.provider === "momo" ? "Thanh toán MoMo" : "Thanh toán VietQR"}</h2>
@@ -2587,16 +2631,23 @@ function CheckoutPage({ bookingId, onBack, settings = {} }) {
 
         <aside className="checkout-summary-card">
           <h2>Thông tin booking</h2>
+          <div className="checkout-room-image">
+            <img src={roomImage} alt={checkout?.room?.name || "Phòng đã chọn"} onError={(event) => { event.currentTarget.src = "/assets/imgs/room-01.png"; }} />
+            <span>{checkout?.room?.name || "Phòng"}</span>
+          </div>
           <dl>
             <div><dt>Phòng</dt><dd>{checkout?.room?.name || "Phòng đã chọn"}</dd></div>
             <div><dt>Chi nhánh</dt><dd>{checkout?.branch?.name || siteName}</dd></div>
+            <div><dt>Ngày đặt</dt><dd>{bookingDateText}</dd></div>
             <div><dt>Khung giờ</dt><dd>{slotsText}</dd></div>
-            <div><dt>Trạng thái</dt><dd>{checkout?.status || "pending_payment"}</dd></div>
+            <div><dt>Trạng thái</dt><dd><span className={`checkout-status ${isPayable ? "" : "expired"}`}>{isPayable ? "Chờ thanh toán" : "Đã hết hạn"}</span></dd></div>
           </dl>
           <div className="detail-payment-total">
             <span>Tổng tiền</span>
             <strong>{money(checkout?.total_amount || 0)}</strong>
           </div>
+          <div className="checkout-code"><span>Mã booking</span><button type="button" onClick={copyPaymentContent}>#{checkout?.booking_code || "-"}<Copy size={15} /></button></div>
+          <p className="checkout-confirmation"><CheckCircle2 size={18} /> Sau khi thanh toán thành công, bạn sẽ nhận được xác nhận qua email hoặc Zalo.</p>
         </aside>
       </div>
     </section>

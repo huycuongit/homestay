@@ -49,7 +49,7 @@ function Footer({ branches = [], settings = {} }) {
             <h3 className="footer-title">Map</h3>
             <div className="footer-map-box">
               <span>{siteName}</span>
-              <small>{visibleBranches.map((branch) => branch.nav_name || branch.name).join(" · ")}</small>
+              <small>{visibleBranches.length ? `${visibleBranches.length} chi nhánh đang hoạt động tại Đồng Nai và Bình Dương` : "Hệ thống chi nhánh FEBoking"}</small>
             </div>
             <a className="footer-link" href="#branches">Xem hệ thống chi nhánh</a>
           </div>
