@@ -13,16 +13,13 @@ const heroFeatures = [
 
 function HeroSection({ branches, bookingOptions = [], selectedBranchId, search, loading, onSearch, onBranchChange, onUpdateSearch, settings = {}, images = [], commits = [] }) {
   const slots = bookingOptions.length ? bookingOptions : fallbackBookingSlots;
-  const dynamicShots = images.length
-    ? images.slice(0, 5).map((image) => ({ label: image.name || image.description || "Ảnh trải nghiệm", src: assetUrl(image.url) }))
-    : heroShots;
-  const dynamicFeatures = commits.length
-    ? commits.slice(0, 6).map((commit, index) => ({
-        icon: [ShieldCheck, Projector, Bath, Soup, MapPin, Heart][index % 6],
-        title: commit.name,
-        text: commit.description
-      }))
-    : heroFeatures;
+  const dynamicShots = heroShots;
+  const dynamicFeatures = heroFeatures.map((feature, index) => {
+    const commit = commits[index];
+    return commit
+      ? { ...feature, title: commit.name || feature.title, text: commit.description || feature.text }
+      : feature;
+  });
   const visibleSlots = slots.filter((slot) => slot.type === search.booking_type);
   const rateOptions = slots.reduce((result, slot) => {
     if (!result.some((item) => item.value === slot.type)) {
@@ -36,7 +33,7 @@ function HeroSection({ branches, bookingOptions = [], selectedBranchId, search, 
       <div className="hero-stage">
         <div className="hero-backdrop">
           <div className="hero-copy">
-            <p className="hero-kicker">{settings.hero_kicker || settings.site_name || "ftft"}</p>
+            <p className="hero-kicker">{settings.hero_kicker || settings.site_name || "FEBoking"}</p>
             <h1>{settings.hero_title || "Một khoảng riêng,"}<br /><span>{settings.hero_title_highlight || "ngay gần bạn."}</span></h1>
             <p className="hero-subtitle">
               {settings.hero_subtitle || "Homestay, căn hộ riêng tư dành cho những buổi hẹn, staycation và những ngày chỉ muốn ở cạnh nhau."}
@@ -48,7 +45,7 @@ function HeroSection({ branches, bookingOptions = [], selectedBranchId, search, 
           <div className="hero-shot-strip" aria-label="Ảnh trải nghiệm nổi bật">
             {dynamicShots.map((shot) => (
               <figure className="hero-shot" key={shot.label}>
-                <img src={shot.src} alt={shot.label} />
+                <img src={shot.src} alt={shot.label} onError={(event) => { event.currentTarget.src = "/assets/imgs/feboking-home.png"; }} />
               </figure>
             ))}
           </div>
@@ -77,7 +74,6 @@ function HeroSection({ branches, bookingOptions = [], selectedBranchId, search, 
               id="booking_type"
               value={search.booking_type}
               onChange={(event) => onUpdateSearch("booking_type", event.target.value)}
-              disabled={!selectedBranchId}
             >
               <option value="">Tất cả</option>
               {rateOptions.map((option) => (
@@ -95,7 +91,6 @@ function HeroSection({ branches, bookingOptions = [], selectedBranchId, search, 
               type="date"
               value={search.booking_date}
               onChange={(event) => onUpdateSearch("booking_date", event.target.value)}
-              disabled={!selectedBranchId}
             />
           </div>
 
@@ -105,7 +100,7 @@ function HeroSection({ branches, bookingOptions = [], selectedBranchId, search, 
               id="slot_id"
               value={search.slot_id}
               onChange={(event) => onUpdateSearch("slot_id", event.target.value)}
-              disabled={!selectedBranchId || !search.booking_type}
+              disabled={!search.booking_type}
             >
               <option value="">Chọn khung giờ</option>
               {visibleSlots.map((slot) => (
@@ -126,7 +121,6 @@ function HeroSection({ branches, bookingOptions = [], selectedBranchId, search, 
                 min="1"
                 value={search.guests}
                 onChange={(event) => onUpdateSearch("guests", event.target.value)}
-                disabled={!selectedBranchId}
               />
               <span>khách</span>
             </div>

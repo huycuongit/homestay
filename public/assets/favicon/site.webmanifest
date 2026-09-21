@@ -1,11 +1,11 @@
 {
-    "name": "ftft",
-    "short_name": "ftft",
+    "name": "FEBoking",
+    "short_name": "FEBoking",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#1993E6",
     "theme_color": "#1993E6",
-    "description": "Website ftft.",
+    "description": "Website FEBoking.",
     "icons": [
         {
             "src": "/assets/favicon/android-chrome-192x192.png",

@@ -1,81 +1,83 @@
+export const HOMEPAGE_IMAGE = "/assets/imgs/feboking-home.png";
+
 export const heroShots = [
   {
     label: "view ban công ngắm hoàng hôn",
-    src: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=500&q=80"
+    src: HOMEPAGE_IMAGE
   },
   {
     label: "góc chill trong phòng",
-    src: "https://images.unsplash.com/photo-1616046229478-9901c5536a45?auto=format&fit=crop&w=500&q=80"
+    src: HOMEPAGE_IMAGE
   },
   {
     label: "máy chiếu full HD",
-    src: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=500&q=80"
+    src: HOMEPAGE_IMAGE
   },
   {
     label: "phòng ngủ cinema",
-    src: "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&w=500&q=80"
+    src: HOMEPAGE_IMAGE
   },
   {
     label: "thỏa sức chill cùng boardgames",
-    src: "https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?auto=format&fit=crop&w=500&q=80"
+    src: HOMEPAGE_IMAGE
   }
 ];
 
 export const experienceMoods = [
   {
-    title: "Movie Night",
-    text: "Máy chiếu · Netflix · Sofa",
-    image: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600&q=85"
+    title: "Buổi chiếu riêng",
+    text: "Máy chiếu · Netflix · Sofa êm",
+    image: HOMEPAGE_IMAGE
   },
   {
-    title: "Bath & Chill",
-    text: "Bồn tắm · Nến thơm · Thư giãn",
-    image: "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=600&q=85"
+    title: "Ngâm mình thư giãn",
+    text: "Bồn tắm · Ánh đèn dịu · Nghỉ ngơi",
+    image: HOMEPAGE_IMAGE
   },
   {
-    title: "Game Date",
-    text: "PS5 · Boardgame · Giải trí",
-    image: "https://images.unsplash.com/photo-1605901309584-818e25960a8f?auto=format&fit=crop&w=600&q=85"
+    title: "Hẹn hò vui vẻ",
+    text: "Boardgame · Đồ ăn nhẹ · Tiếng cười",
+    image: HOMEPAGE_IMAGE
   },
   {
-    title: "Cook Together",
+    title: "Bữa tối tại phòng",
     text: "Bếp riêng · Bàn ăn · Ấm cúng",
-    image: "https://images.unsplash.com/photo-1556911220-bff31c812dba?auto=format&fit=crop&w=600&q=85"
+    image: HOMEPAGE_IMAGE
   },
   {
-    title: "Overnight",
-    text: "Giường lớn · Check-out muộn",
-    image: "https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=600&q=85"
+    title: "Ở lại thật lâu",
+    text: "Giường lớn · Không gian yên tĩnh",
+    image: HOMEPAGE_IMAGE
   }
 ];
 
 export const experienceSteps = [
   {
     time: "18:00",
-    title: "Check-in nhanh",
-    text: "Nhận phòng dễ dàng, không cần chờ đợi.",
-    image: "https://images.unsplash.com/photo-1554995207-c18c203602cb?auto=format&fit=crop&w=600&q=85",
+    title: "Đến nơi nhẹ nhàng",
+    text: "Nhận hướng dẫn rõ ràng trước giờ hẹn.",
+    image: HOMEPAGE_IMAGE,
     icon: "key"
   },
   {
     time: "18:15",
-    title: "Chill một chút",
-    text: "Bật playlist, gọi đồ ăn, ngả lưng trên sofa.",
-    image: "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=600&q=85",
+    title: "Chọn mood cho buổi hẹn",
+    text: "Bật playlist, chuẩn bị đồ ăn và thảnh thơi.",
+    image: HOMEPAGE_IMAGE,
     icon: "sofa"
   },
   {
     time: "19:30",
-    title: "Movie Night",
-    text: "Netflix + máy chiếu, chọn một bộ phim cả hai thích.",
-    image: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600&q=85",
+    title: "Khoảnh khắc của hai người",
+    text: "Tận hưởng màn chiếu lớn và không gian riêng tư.",
+    image: HOMEPAGE_IMAGE,
     icon: "movie"
   },
   {
     time: "22:00",
-    title: "Chẳng cần vội",
-    text: "Muốn ở thêm? Gia hạn ngay trên ftft.",
-    image: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=600&q=85",
+    title: "Không cần vội vàng",
+    text: "Chọn qua đêm khi bạn muốn thời gian dài hơn.",
+    image: HOMEPAGE_IMAGE,
     icon: "moon"
   }
 ];
@@ -84,17 +86,17 @@ export const branchHighlights = [
   {
     name: "Biên Hòa",
     text: "12+ phòng · Cách trung tâm 5 phút",
-    image: "https://images.unsplash.com/photo-1600585154363-67eb9e2e2099?auto=format&fit=crop&w=500&q=85"
+    image: HOMEPAGE_IMAGE
   },
   {
     name: "Dĩ An",
     text: "8+ phòng · Cách trung tâm 10 phút",
-    image: "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=500&q=85"
+    image: HOMEPAGE_IMAGE
   },
   {
     name: "Thủ Đức",
     text: "6+ phòng · Cách trung tâm 15 phút",
-    image: "https://images.unsplash.com/photo-1616046229478-9901c5536a45?auto=format&fit=crop&w=500&q=85"
+    image: HOMEPAGE_IMAGE
   }
 ];
 

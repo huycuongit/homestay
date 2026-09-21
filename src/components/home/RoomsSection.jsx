@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { assetUrl, money } from "../../utils/format";
 
-const hotRoomImage = "/assets/imgs/date-night-room.png";
+const hotRoomImage = "/assets/imgs/feboking-home.png";
 const hotBadges = ["Hot", "Yêu thích", "Mới", "Ưu đãi"];
 
 function RoomsSection({ rooms, selectedBranch, loading, notice, onOpenRoomDetail, onShowRooms, amenities = [] }) {
@@ -44,7 +44,7 @@ function RoomsSection({ rooms, selectedBranch, loading, notice, onOpenRoomDetail
           {visibleRooms.map((room, index) => (
             <article className="room-card" key={room.id}>
               <div className="room-image">
-                <img src={assetUrl(room.main_image || room.cover_image || room.image_url || hotRoomImage)} alt={room.name} />
+                <img src={assetUrl(room.main_image || room.cover_image || room.image_url || hotRoomImage)} alt={room.name} onError={(event) => { event.currentTarget.src = hotRoomImage; }} />
                 <span><Star size={12} fill="currentColor" /> {hotBadges[index % hotBadges.length]}</span>
                 <button type="button" aria-label="Xem phòng yêu thích" onClick={() => onOpenRoomDetail(room)}><Heart size={20} /></button>
               </div>
@@ -54,7 +54,7 @@ function RoomsSection({ rooms, selectedBranch, loading, notice, onOpenRoomDetail
                     {room.name}
                   </button>
                 </div>
-                <p className="room-address"><MapPin size={14} /> {room.branch?.nav_name || room.branch?.name || room.branch?.address || "ftft"}</p>
+                <p className="room-address"><MapPin size={14} /> {room.branch?.nav_name || room.branch?.name || room.branch?.address || "FEBoking"}</p>
                 <div className="room-amenities">
                   {(room.amenities?.length ? room.amenities.map((item) => item.name) : fallbackAmenities).slice(0, 4).map((name, amenityIndex) => {
                     const icons = [BedDouble, Projector, Bath, Sofa];

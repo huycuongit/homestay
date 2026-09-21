@@ -138,9 +138,7 @@ function getSearchSlotRange(search, options = bookingSlots) {
 function mapSystemRows(rows = []) {
   return rows.reduce((result, row) => {
     result[row.key] = String(row.content || "")
-      .replace(/FEBooking/gi, "ftft")
-      .replace(/FEBoking/gi, "ftft")
-      .replace(/\bFEB\b/g, "ftft");
+      .replace(/\bftft\b/gi, "FEBoking");
     return result;
   }, {});
 }
@@ -155,6 +153,8 @@ function App() {
   const [search, setSearch] = useState(() => createEmptySearch());
   const [rooms, setRooms] = useState([]);
   const [homeRooms, setHomeRooms] = useState([]);
+  const [roomsList, setRoomsList] = useState([]);
+  const [hasRoomSearch, setHasRoomSearch] = useState(false);
   const [homeContent, setHomeContent] = useState({
     systems: {},
     pages: [],
@@ -191,10 +191,6 @@ function App() {
   }, [search.booking_type, selectedRoom]);
 
   async function fetchRooms(nextSearch = search, branchId = selectedBranchId) {
-    if (!branchId) {
-      setNotice({ type: "muted", text: "Vui lòng chọn chi nhánh trước khi tìm phòng." });
-      return;
-    }
     setLoading(true);
     setNotice(null);
 
@@ -214,14 +210,24 @@ function App() {
         slot_code: nextSearch.slot_id,
         guests: String(nextSearch.guests)
       });
-      params.set("branch_id", String(branchId));
+      if (branchId) params.set("branch_id", String(branchId));
       const payload = await apiFetch(`/rooms/available?${params.toString()}`);
-      setRooms(payload.data || []);
-      if (!payload.data?.length) {
+      const foundRooms = payload.data || [];
+      setRooms(foundRooms);
+      setRoomsList(foundRooms);
+      setHasRoomSearch(true);
+      setCurrentRoomId(null);
+      setCheckoutBookingId(null);
+      setPublicPage("rooms");
+      window.history.pushState({}, "", "/rooms");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      if (!foundRooms.length) {
         setNotice({ type: "muted", text: "Không có phòng trống theo chi nhánh, ngày, khung giờ này. Thử đổi slot hoặc số khách." });
       }
     } catch (error) {
       setRooms([]);
+      setRoomsList([]);
+      setHasRoomSearch(false);
       setNotice({ type: "error", text: error.message });
     } finally {
       setLoading(false);
@@ -291,6 +297,7 @@ function App() {
     setPublicPage(options.target === "rooms" ? "rooms" : "home");
     setCurrentRoomId(null);
     setCheckoutBookingId(null);
+    setHasRoomSearch(false);
     setNotice(null);
     showHomeRooms(nextBranchId);
     if (options.scroll !== false) {
@@ -336,6 +343,7 @@ function App() {
     setNotice(null);
     setCurrentRoomId(null);
     setCheckoutBookingId(null);
+    setHasRoomSearch(false);
     setPublicPage("rooms");
     window.history.pushState({}, "", "/rooms");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -345,6 +353,7 @@ function App() {
     setSelectedBranchId(null);
     setSearch(createEmptySearch());
     setNotice(null);
+    setHasRoomSearch(false);
     setCurrentRoomId(null);
     setPublicPage("home");
     showHomeRooms(null);
@@ -520,7 +529,6 @@ function App() {
         user={authUser}
         onBranchSelect={selectBranch}
         onHomeClick={showHome}
-        onShowRooms={showRoomsPage}
         onShowBooking={scrollToBooking}
         onLoginClick={() => openAuth("login")}
         onLogout={logoutUser}
@@ -544,7 +552,7 @@ function App() {
         ) : publicPage === "rooms" ? (
           <RoomsListPage
             branches={branches}
-            rooms={homeRooms}
+            rooms={hasRoomSearch ? roomsList : homeRooms}
             selectedBranchId={selectedBranchId}
             onBranchChange={(branchId) => showRoomsPage(branchId)}
             onOpenRoomDetail={openRoomDetail}
@@ -559,7 +567,10 @@ function App() {
           search={search}
           loading={loading}
           onSearch={loadRooms}
-          onBranchChange={(branchId) => selectBranch(branchId, { scroll: false })}
+          onBranchChange={(branchId) => {
+            setSelectedBranchId(branchId ? Number(branchId) : null);
+            setNotice(null);
+          }}
           onUpdateSearch={updateSearch}
           settings={homeContent.systems}
           images={homeContent.images}
@@ -1191,7 +1202,7 @@ function AdminPage() {
           <div className="admin-login-brand">
             <BrandLogo className="admin-login-logo" showText={false} />
             <div>
-              <h1>ftft CMS</h1>
+              <h1>FEBoking CMS</h1>
               <p>Quản trị nội dung, phòng và booking.</p>
             </div>
           </div>
@@ -1933,7 +1944,7 @@ function RoomDetailPage({ room, loading, notice, search, updateSearch, onBack, o
   const [detailSubmitting, setDetailSubmitting] = useState(false);
   const [detailNotice, setDetailNotice] = useState(null);
   const [paymentBooking, setPaymentBooking] = useState(null);
-  const siteName = settings.site_name || "ftft";
+  const siteName = settings.site_name || "FEBoking";
   const gallery = room?.images?.length
     ? room.images.map((image) => assetUrl(image.image_url || image.image_path))
     : [
@@ -2447,7 +2458,7 @@ function CheckoutPage({ bookingId, onBack, settings = {} }) {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [checkoutNotice, setCheckoutNotice] = useState(null);
-  const siteName = settings.site_name || "ftft";
+  const siteName = settings.site_name || "FEBoking";
 
   const payment = checkout?.payment;
   const slotsText = checkout?.slots?.length

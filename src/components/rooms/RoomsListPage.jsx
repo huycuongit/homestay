@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Bath, BedDouble, Building2, Heart, MapPin, Projector, Search, Sofa, Star } from "lucide-react";
 import { assetUrl } from "../../utils/format";
 
-const fallbackRoomImage = "/assets/imgs/date-night-room.png";
+const fallbackRoomImage = "/assets/imgs/feboking-home.png";
 const badges = ["Hot", "Yêu thích", "Mới", "Ưu đãi"];
 const PAGE_SIZE = 8;
 const amenityIcons = [BedDouble, Projector, Bath, Sofa];
@@ -83,7 +83,7 @@ function RoomsListPage({ branches = [], rooms = [], selectedBranchId, onBranchCh
             {pageRooms.map((room, index) => (
               <article className="room-card" key={room.id}>
                 <div className="room-image">
-                  <img src={assetUrl(room.main_image || room.cover_image || room.image_url || fallbackRoomImage)} alt={room.name} />
+                  <img src={assetUrl(room.main_image || room.cover_image || room.image_url || fallbackRoomImage)} alt={room.name} onError={(event) => { event.currentTarget.src = fallbackRoomImage; }} />
                   <span><Star size={12} fill="currentColor" /> {badges[((currentPage - 1) * PAGE_SIZE + index) % badges.length]}</span>
                   <button type="button" aria-label="Yêu thích"><Heart size={20} /></button>
                 </div>
@@ -93,7 +93,7 @@ function RoomsListPage({ branches = [], rooms = [], selectedBranchId, onBranchCh
                       {room.name}
                     </button>
                   </div>
-                  <p className="room-address"><MapPin size={14} /> {room.branch?.nav_name || room.branch?.name || room.branch?.address || "ftft"}</p>
+                  <p className="room-address"><MapPin size={14} /> {room.branch?.nav_name || room.branch?.name || room.branch?.address || "FEBoking"}</p>
                   <div className="room-amenities">
                     {(room.amenities?.length ? room.amenities.map((item) => item.name) : ["Giường King", "Máy chiếu", "Bồn tắm", "Bếp tiện nghi"]).slice(0, 4).map((name, amenityIndex) => {
                       const Icon = amenityIcons[amenityIndex % amenityIcons.length];

@@ -8,18 +8,16 @@ function Header({
   user,
   onBranchSelect,
   onHomeClick,
-  onShowRooms,
   onShowBooking,
   onLoginClick,
   onLogout,
   settings = {}
 }) {
-  const selectedBranch = branches.find((branch) => String(branch.id) === String(selectedBranchId));
-  const siteName = settings.site_name || "ftft";
+  const siteName = settings.site_name || "FEBoking";
 
   return (
     <header className="topbar">
-      <button className="brand brand-button" type="button" onClick={onHomeClick} aria-label="ftft Booking">
+      <button className="brand brand-button" type="button" onClick={onHomeClick} aria-label="FEBoking">
         <BrandLogo className="site-brand-logo" label={siteName} />
       </button>
       <nav className="nav-links" aria-label="Điều hướng chính">
@@ -28,7 +26,7 @@ function Header({
         </button>
         <div className="nav-dropdown">
           <button className={selectedBranchId ? "nav-link-btn active" : "nav-link-btn"} type="button">
-            {selectedBranch?.nav_name || selectedBranch?.name || "Chi nhánh"}
+            Chi nhánh
             <ChevronDown size={14} />
           </button>
           <div className="nav-dropdown-menu" role="menu">
@@ -48,9 +46,6 @@ function Header({
             ))}
           </div>
         </div>
-        <button className={publicPage === "rooms" && !selectedBranchId ? "nav-link-btn active" : "nav-link-btn"} type="button" onClick={() => onShowRooms(null)}>
-          Tất cả phòng
-        </button>
       </nav>
       <div className="header-actions">
         <button className="nav-search-btn" type="button" onClick={onShowBooking} aria-label="Tìm kiếm phòng">

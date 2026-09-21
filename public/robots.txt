@@ -6,5 +6,5 @@ Disallow:
 
 Allow: /assets/favicon/favicon.ico
 
-Sitemap: https://ftft.vn/sitemap.xml
-Sitemap: https://ftft.vn/sitemap_index.xml
+Sitemap: https://feboking.vn/sitemap.xml
+Sitemap: https://feboking.vn/sitemap_index.xml

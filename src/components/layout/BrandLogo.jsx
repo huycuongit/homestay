@@ -1,13 +1,7 @@
-function BrandLogo({ className = "", showText = false, label = "ftft" }) {
-  const brandName = String(label || "ftft")
-    .replace(/FEBooking/gi, "ftft")
-    .replace(/FEBoking/gi, "ftft")
-    .replace(/\bFEB\b/g, "ftft");
-
+function BrandLogo({ className = "", label = "FEBoking" }) {
   return (
     <span className={`brand-logo ${className}`.trim()}>
-      <span className="brand-logo-mark" aria-hidden="true">ft</span>
-      <strong>{showText ? brandName : brandName}</strong>
+      <img src="/assets/imgs/feboking-logo.png" alt={label || "FEBoking"} />
     </span>
   );
 }

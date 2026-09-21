@@ -10,7 +10,7 @@ const stepIcons = {
 };
 
 function IntroSection({ branches = [], onShowRooms, onShowBooking, onBranchSelect, settings = {}, images = [], pages = [] }) {
-  const siteName = settings.site_name || "ftft";
+  const siteName = settings.site_name || "FEBoking";
   const imagePool = images.length ? images.map((image) => assetUrl(image.url)) : [];
   const pageMoods = pages.filter((page) => String(page.key || page.slug || "").startsWith("mood_"));
   const moodItems = pageMoods.length
@@ -21,7 +21,7 @@ function IntroSection({ branches = [], onShowRooms, onShowBooking, onBranchSelec
       }))
     : experienceMoods.map((mood, index) => ({ ...mood, image: imagePool[index % imagePool.length] || mood.image }));
   const visibleBranches = branches.length
-    ? branches.slice(0, 4).map((branch, index) => ({
+    ? branches.slice(0, 3).map((branch, index) => ({
         id: branch.id,
         name: branch.nav_name || branch.name,
         text: branch.address || `${branch.rooms_count || 0}+ phòng`,
@@ -46,7 +46,7 @@ function IntroSection({ branches = [], onShowRooms, onShowBooking, onBranchSelec
         <div className="mood-grid">
           {moodItems.map((mood) => (
             <article className="mood-card" key={mood.title}>
-              <img src={mood.image} alt={mood.title} />
+              <img src={mood.image || "/assets/imgs/feboking-home.png"} alt={mood.title} onError={(event) => { event.currentTarget.src = "/assets/imgs/feboking-home.png"; }} />
               <button type="button" onClick={onShowRooms} aria-label={`Xem ${mood.title}`}><ArrowRight size={16} /></button>
               <div>
                 <h3>{mood.title}</h3>
@@ -72,7 +72,7 @@ function IntroSection({ branches = [], onShowRooms, onShowBooking, onBranchSelec
             return (
               <article className="journey-card" key={step.time}>
                 <time>{step.time}</time>
-                <img src={step.image} alt={step.title} />
+                <img src={step.image || "/assets/imgs/feboking-home.png"} alt={step.title} onError={(event) => { event.currentTarget.src = "/assets/imgs/feboking-home.png"; }} />
                 <div className="journey-icon"><Icon size={20} /></div>
                 <div>
                   <h3>{step.title}</h3>
@@ -95,7 +95,7 @@ function IntroSection({ branches = [], onShowRooms, onShowBooking, onBranchSelec
         <div className="branch-highlight-grid">
           {visibleBranches.map((branch) => (
             <article className="branch-highlight-card" key={branch.name}>
-              <img src={branch.image} alt={branch.name} />
+              <img src={branch.image || "/assets/imgs/feboking-home.png"} alt={branch.name} onError={(event) => { event.currentTarget.src = "/assets/imgs/feboking-home.png"; }} />
               <div>
                 <h3>{branch.name}</h3>
                 <p>{branch.text}</p>
