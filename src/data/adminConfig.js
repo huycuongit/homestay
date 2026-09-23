@@ -5,7 +5,6 @@ export const adminResources = [
   { key: "rental-packages", label: "Gói thuê", group: "Danh mục", fields: ["code", "name", "price_amount", "duration_minutes", "active", "position"] },
   { key: "slot-templates", label: "Khung giờ mẫu", group: "Danh mục", fields: ["rental_package_code", "code", "label", "start_time", "end_time", "crosses_midnight", "active", "position"] },
   { key: "bookings", label: "Booking", group: "Danh mục", fields: ["booking_code", "room_id", "branch_id", "customer_name", "customer_phone", "customer_email", "check_in", "check_out", "guests", "note", "internal_note", "status", "payment_status", "total_price"] },
-  { key: "homestays", label: "Homestay", group: "Danh mục", fields: ["name", "slug", "address", "location", "description", "active", "position"] },
   { key: "news", label: "Tin tức", group: "Danh mục", fields: ["name", "slug", "avatar", "description", "content", "publish_time", "active", "position", "active_publish"] },
   { key: "images", label: "Hình ảnh", group: "Hình ảnh", fields: ["gallery_id", "url", "name", "description", "active", "position"] },
   { key: "galleries", label: "Bộ sưu tập", group: "Hình ảnh", fields: ["name", "slug", "description", "active", "position"] },

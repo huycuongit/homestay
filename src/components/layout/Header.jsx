@@ -9,6 +9,7 @@ function Header({
   user,
   onBranchSelect,
   onShowBranches,
+  onShowNews,
   onHomeClick,
   onShowRooms,
   onShowBooking,
@@ -56,6 +57,9 @@ function Header({
         </div>
         <button className={publicPage === "branches" ? "nav-link-btn active" : "nav-link-btn"} type="button" onClick={() => { onShowBranches(); closeMobileMenu(); }}>
           Chi nhánh
+        </button>
+        <button className={publicPage === "news" || publicPage === "news-detail" ? "nav-link-btn active" : "nav-link-btn"} type="button" onClick={() => { onShowNews(); closeMobileMenu(); }}>
+          Tin tức
         </button>
       </nav>
       <div className="header-actions">

@@ -52,6 +52,8 @@ import BrandLogo from "./components/layout/BrandLogo";
 import HeroSection from "./components/home/HeroSection";
 import IntroSection from "./components/home/IntroSection";
 import BranchesPage from "./components/branches/BranchesPage";
+import NewsPage from "./components/news/NewsPage";
+import NewsDetailPage from "./components/news/NewsDetailPage";
 import RoomsSection from "./components/home/RoomsSection";
 import RoomsListPage from "./components/rooms/RoomsListPage";
 import { API_BASE_URL, SOCKET_BASE_URL } from "./config/appConfig";
@@ -71,9 +73,16 @@ function getCheckoutIdFromPath() {
   return match ? match[1] : null;
 }
 
+function getNewsSlugFromPath() {
+  const match = window.location.pathname.match(/^\/news\/([^/?#]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 function getPublicPageFromPath() {
   if (window.location.pathname === "/rooms") return "rooms";
   if (window.location.pathname === "/branches") return "branches";
+  if (window.location.pathname === "/news") return "news";
+  if (getNewsSlugFromPath()) return "news-detail";
   return "home";
 }
 
@@ -150,6 +159,9 @@ function mapSystemRows(rows = []) {
 function App() {
   const [currentRoomId, setCurrentRoomId] = useState(getRoomKeyFromPath());
   const [checkoutBookingId, setCheckoutBookingId] = useState(getCheckoutIdFromPath());
+  const [currentNewsSlug, setCurrentNewsSlug] = useState(getNewsSlugFromPath());
+  const [newsDetail, setNewsDetail] = useState(null);
+  const [newsDetailLoading, setNewsDetailLoading] = useState(false);
   const [publicPage, setPublicPage] = useState(getPublicPageFromPath());
   const [isAdminRoute, setIsAdminRoute] = useState(window.location.pathname.startsWith("/admin"));
   const [detailRoom, setDetailRoom] = useState(null);
@@ -166,7 +178,7 @@ function App() {
     commits: [],
     amenities: [],
     galleries: [],
-    homestays: []
+    news: []
   });
   const [branches, setBranches] = useState([]);
   const [bookingOptions, setBookingOptions] = useState(bookingSlots);
@@ -278,7 +290,7 @@ function App() {
         commits: data.commits || [],
         amenities: data.amenities || [],
         galleries: data.galleries || [],
-        homestays: data.homestays || []
+        news: data.news || []
       });
       const nextBookingOptions = normalizeBookingOptions(payload.data?.booking_options || []);
       const defaultOptions = nextBookingOptions.length ? nextBookingOptions : bookingSlots;
@@ -347,6 +359,7 @@ function App() {
     setNotice(null);
     setCurrentRoomId(null);
     setCheckoutBookingId(null);
+    setCurrentNewsSlug(null);
     setHasRoomSearch(false);
     setPublicPage("rooms");
     window.history.pushState({}, "", "/rooms");
@@ -356,9 +369,31 @@ function App() {
   function showBranchesPage() {
     setCurrentRoomId(null);
     setCheckoutBookingId(null);
+    setCurrentNewsSlug(null);
     setPublicPage("branches");
     setNotice(null);
     window.history.pushState({}, "", "/branches");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function showNewsPage() {
+    setCurrentRoomId(null);
+    setCheckoutBookingId(null);
+    setCurrentNewsSlug(null);
+    setPublicPage("news");
+    setNotice(null);
+    window.history.pushState({}, "", "/news");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function openNewsDetail(article) {
+    const slug = article?.slug || article?.id;
+    if (!slug) return;
+    setCurrentRoomId(null);
+    setCheckoutBookingId(null);
+    setCurrentNewsSlug(String(slug));
+    setPublicPage("news-detail");
+    window.history.pushState({}, "", `/news/${encodeURIComponent(slug)}`);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -369,6 +404,7 @@ function App() {
     setHasRoomSearch(false);
     setCurrentRoomId(null);
     setCheckoutBookingId(null);
+    setCurrentNewsSlug(null);
     setPublicPage("home");
     showHomeRooms(null);
     window.history.pushState({}, "", "/");
@@ -516,6 +552,7 @@ function App() {
     function handlePopState() {
       setCurrentRoomId(getRoomKeyFromPath());
       setCheckoutBookingId(getCheckoutIdFromPath());
+      setCurrentNewsSlug(getNewsSlugFromPath());
       setPublicPage(getPublicPageFromPath());
       setIsAdminRoute(window.location.pathname.startsWith("/admin"));
     }
@@ -530,6 +567,28 @@ function App() {
     }
   }, [currentRoomId]);
 
+  useEffect(() => {
+    if (!currentNewsSlug) {
+      setNewsDetail(null);
+      return;
+    }
+
+    let cancelled = false;
+    setNewsDetailLoading(true);
+    apiFetch(`/news/slug/${encodeURIComponent(currentNewsSlug)}`)
+      .then((payload) => {
+        if (!cancelled) setNewsDetail({ article: payload.data, related: payload.related || [] });
+      })
+      .catch((error) => {
+        if (!cancelled) setNewsDetail({ error: error.message });
+      })
+      .finally(() => {
+        if (!cancelled) setNewsDetailLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [currentNewsSlug]);
+
   if (isAdminRoute) {
     return <AdminPage />;
   }
@@ -543,6 +602,7 @@ function App() {
         user={authUser}
         onBranchSelect={selectBranch}
         onShowBranches={showBranchesPage}
+        onShowNews={showNewsPage}
         onHomeClick={showHome}
         onShowRooms={showRoomsPage}
         onShowBooking={scrollToBooking}
@@ -579,6 +639,22 @@ function App() {
             branches={branches}
             onBackHome={showHome}
             onBrowseRooms={(branchId) => showRoomsPage(branchId)}
+          />
+        ) : publicPage === "news" ? (
+          <NewsPage
+            news={homeContent.news}
+            settings={homeContent.systems}
+            onBackHome={showHome}
+            onOpenArticle={openNewsDetail}
+          />
+        ) : publicPage === "news-detail" ? (
+          <NewsDetailPage
+            detail={newsDetail}
+            loading={newsDetailLoading}
+            fallbackNews={homeContent.news}
+            settings={homeContent.systems}
+            onBack={showNewsPage}
+            onOpenArticle={openNewsDetail}
           />
         ) : (
         <>
@@ -723,7 +799,6 @@ function AdminPage() {
     rooms: Hotel,
     "room-images": ImagePlus,
     bookings: CalendarCheck,
-    homestays: MapPin,
     commits: CheckCircle2,
     contacts: Phone,
     pages: Copy,
