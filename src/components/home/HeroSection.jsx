@@ -14,12 +14,9 @@ const heroFeatures = [
 function HeroSection({ branches, bookingOptions = [], selectedBranchId, search, loading, onSearch, onBranchChange, onUpdateSearch, settings = {}, images = [], commits = [] }) {
   const slots = bookingOptions.length ? bookingOptions : fallbackBookingSlots;
   const dynamicShots = heroShots;
-  const dynamicFeatures = heroFeatures.map((feature, index) => {
-    const commit = commits[index];
-    return commit
-      ? { ...feature, title: commit.name || feature.title, text: commit.description || feature.text }
-      : feature;
-  });
+  // Benefits are a fixed part of the booking experience; legacy CMS commits
+  // are still used elsewhere and should not overwrite these labels.
+  const dynamicFeatures = heroFeatures;
   const visibleSlots = slots.filter((slot) => slot.type === search.booking_type);
   const rateOptions = slots.reduce((result, slot) => {
     if (!result.some((item) => item.value === slot.type)) {
